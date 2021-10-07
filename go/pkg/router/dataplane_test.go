@@ -1555,7 +1555,7 @@ func TestProcessColibriPkt(t *testing.T) {
 							},
 						},
 					},
-					xtest.MustParseIA("1-ff00:0:110"), nil, key)
+					xtest.MustParseIA("4-ff00:0:411"), nil, key)
 			},
 			mockMsg: func(afterProcessing bool, expTick, tsRel uint32) *ipv4.Message {
 				spkt, cpath := prepColibriBaseMsg(true, false, false, 4, 5, expTick, tsRel)
@@ -1678,7 +1678,7 @@ func TestProcessColibriPkt(t *testing.T) {
 							},
 						},
 					},
-					xtest.MustParseIA("1-ff00:0:110"), nil, key)
+					xtest.MustParseIA("2-ff00:0:222"), nil, key)
 			},
 			mockMsg: func(afterProcessing bool, expTick, tsRel uint32) *ipv4.Message {
 				spkt, cpath := prepColibriBaseMsg(true, false, false, 0, 5, expTick, tsRel)

@@ -131,6 +131,14 @@ func (c *colibriPacketProcessor) basicValidation() (processResult, error) {
 		}
 	}
 
+	// Check if destined to local AS: egress is 0, dst is local, no more hosts must be equal
+	isLocal := c.egressInterface() == 0
+	if !((isLocal == c.colibriPathMinimal.IsLastHop()) &&
+		(isLocal == c.scionLayer.DstIA.Equal(c.d.localIA))) {
+
+		return processResult{}, serrors.New("inconsistent packet", "egress_id", c.egressInterface(),
+			"is_last_hop", c.colibriPathMinimal.IsLastHop(), "dst", c.scionLayer.DstIA, "(local)", c.d.localIA)
+	}
 	return processResult{}, nil
 }
 
@@ -162,7 +170,7 @@ func (c *colibriPacketProcessor) forward() (processResult, error) {
 		return c.forwardToColibriSvc()
 	} else {
 		// Data plane forwarding
-		if c.destinedToLocalAS(egressId) {
+		if egressId == 0 {
 			return c.forwardToLocalAS()
 		} else {
 			if conn, ok := c.canForwardLocally(egressId); ok {
@@ -231,9 +239,4 @@ func (c *colibriPacketProcessor) forwardToColibriSvc() (processResult, error) {
 		return processResult{}, serrors.New("no colibri service registered at border router")
 	}
 	return processResult{OutConn: c.d.internal, OutAddr: a, OutPkt: c.rawPkt}, nil
-}
-
-func (c *colibriPacketProcessor) destinedToLocalAS(egressId uint16) bool {
-	isLast := c.colibriPathMinimal.IsLastHop()
-	return c.scionLayer.DstIA.Equal(c.d.localIA) && egressId == 0 && isLast
 }
