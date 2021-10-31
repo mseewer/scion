@@ -142,7 +142,7 @@ func (p *TransparentPath) Len() int {
 }
 
 // Serialize will panic if buff is less bytes than Len().
-func (p *TransparentPath) Serialize(buff []byte, writeMutableFields bool) {
+func (p *TransparentPath) Serialize(buff []byte, options SerializeOptions) {
 	if p == nil {
 		return
 	}
@@ -150,7 +150,7 @@ func (p *TransparentPath) Serialize(buff []byte, writeMutableFields bool) {
 		// disallow existence of TransparentPath with RawPath==nil
 		p.RawPath = empty.Path{}
 	}
-	if writeMutableFields {
+	if options == SerializeMutable {
 		binary.BigEndian.PutUint16(buff, uint16(p.CurrentStep))
 	}
 	buff = buff[2:]
@@ -163,7 +163,7 @@ func (p *TransparentPath) Serialize(buff []byte, writeMutableFields bool) {
 		buff = buff[12:]
 	}
 	buff[0] = byte(p.RawPath.Type())
-	if writeMutableFields {
+	if options == SerializeMutable {
 		if err := p.RawPath.SerializeTo(buff[1:]); err != nil {
 			panic(fmt.Sprintf("cannot serialize path: %s", err))
 		}
@@ -176,7 +176,7 @@ func (p *TransparentPath) ToRaw() []byte {
 	}
 
 	buff := make([]byte, p.Len())
-	p.Serialize(buff, true)
+	p.Serialize(buff, SerializeMutable)
 	return buff
 }
 
