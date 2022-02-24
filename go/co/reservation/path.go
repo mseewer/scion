@@ -130,7 +130,11 @@ func (p *TransparentPath) String() string {
 
 func (p *TransparentPath) Len() int {
 	// currentStep + len(steps) + steps + path_type + rawpath
-	return 2 + 2 + len(p.Steps)*pathStepLen + 1 + p.RawPath.Len()
+	var rawPathLen int
+	if p.RawPath != nil {
+		rawPathLen = p.RawPath.Len()
+	}
+	return 2 + 2 + len(p.Steps)*pathStepLen + 1 + rawPathLen
 }
 
 // Serialize will panic if buff is less bytes than Len().
