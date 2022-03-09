@@ -85,7 +85,7 @@ func TestE2EBaseReqInitialMac(t *testing.T) {
 			for i, a := range tc.clientReq.Authenticators {
 				tc.transitReq.Authenticators[i] = a
 			}
-			auth := DrkeyAuthenticator{
+			auth := DRKeyAuthenticator{
 				localIA:   tc.clientReq.Path.Steps[1].IA,
 				connector: daemon,
 			}
@@ -159,7 +159,7 @@ func TestE2ESetupReqInitialMac(t *testing.T) {
 			for i, a := range tc.clientReq.Authenticators {
 				tc.transitReq.Authenticators[i] = a
 			}
-			auth := DrkeyAuthenticator{
+			auth := DRKeyAuthenticator{
 				localIA:   tc.clientReq.Path.Steps[1].IA,
 				connector: daemon,
 			}
@@ -206,7 +206,7 @@ func TestE2ERequestTransitMac(t *testing.T) {
 			// at the transit ASes:
 			for step := 1; step < len(tc.transitReq.Path.Steps); step++ {
 				tc.transitReq.Path.CurrentStep = step
-				auth := DrkeyAuthenticator{
+				auth := DRKeyAuthenticator{
 					localIA:   tc.transitReq.Path.Steps[step].IA,
 					connector: daemon,
 				}
@@ -216,7 +216,7 @@ func TestE2ERequestTransitMac(t *testing.T) {
 
 			// at the destination AS:
 			tc.transitReq.Path.CurrentStep = len(tc.transitReq.Path.Steps) - 1
-			auth := DrkeyAuthenticator{
+			auth := DRKeyAuthenticator{
 				localIA:   tc.transitReq.Path.DstIA(),
 				connector: daemon,
 			}
@@ -274,7 +274,7 @@ func TestE2ESetupRequestTransitMac(t *testing.T) {
 					continue
 				}
 				tc.transitReq.Path.CurrentStep = step
-				auth := DrkeyAuthenticator{
+				auth := DRKeyAuthenticator{
 					localIA:   tc.transitReq.Path.Steps[step].IA,
 					connector: daemon,
 				}
@@ -284,7 +284,7 @@ func TestE2ESetupRequestTransitMac(t *testing.T) {
 
 			// at the destination AS:
 			tc.transitReq.Path.CurrentStep = len(tc.transitReq.Path.Steps) - 1
-			auth := DrkeyAuthenticator{
+			auth := DRKeyAuthenticator{
 				localIA:   tc.transitReq.Path.DstIA(),
 				connector: daemon,
 			}
@@ -331,7 +331,7 @@ func TestComputeAndValidateResponse(t *testing.T) {
 			// at the transit ASes:
 			for step := 1; step < len(tc.path.Steps); step++ {
 				tc.path.CurrentStep = step
-				auth := DrkeyAuthenticator{
+				auth := DRKeyAuthenticator{
 					localIA:   tc.path.Steps[step].IA,
 					connector: daemon,
 				}
@@ -340,7 +340,7 @@ func TestComputeAndValidateResponse(t *testing.T) {
 			}
 
 			// at the initiator AS:
-			auth := DrkeyAuthenticator{
+			auth := DRKeyAuthenticator{
 				localIA:   tc.path.SrcIA(),
 				connector: daemon,
 			}
@@ -445,7 +445,7 @@ func TestComputeAndValidateSegmentSetupResponse(t *testing.T) {
 				if step > tc.lastStepWhichComputes || step == 0 {
 					continue
 				}
-				auth := DrkeyAuthenticator{
+				auth := DRKeyAuthenticator{
 					localIA:   tc.path.Steps[step].IA,
 					connector: daemon,
 				}
@@ -454,7 +454,7 @@ func TestComputeAndValidateSegmentSetupResponse(t *testing.T) {
 			}
 
 			// at the initiator AS:
-			auth := DrkeyAuthenticator{
+			auth := DRKeyAuthenticator{
 				localIA:   tc.path.SrcIA(),
 				connector: daemon,
 			}
@@ -512,7 +512,7 @@ func TestComputeAndValidateE2EResponseError(t *testing.T) {
 				step := tc.path.Steps[i]
 				tc.path.CurrentStep = i
 
-				auth := DrkeyAuthenticator{
+				auth := DRKeyAuthenticator{
 					localIA:   step.IA,
 					connector: daemon,
 				}
@@ -644,7 +644,7 @@ func TestComputeAndValidateE2ESetupResponse(t *testing.T) {
 					}
 				}
 
-				auth := DrkeyAuthenticator{
+				auth := DRKeyAuthenticator{
 					localIA:   step.IA,
 					connector: daemon,
 				}

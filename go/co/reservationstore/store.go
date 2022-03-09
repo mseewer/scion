@@ -79,7 +79,7 @@ func NewStore(topo *topology.Loader, sd daemon.Connector, router snet.Router,
 		db:            db,
 		admitter:      admitter,
 		operator:      operator,
-		authenticator: NewDrkeyAuthenticator(topo.IA(), sd),
+		authenticator: NewDRKeyAuthenticator(topo.IA(), sd),
 		colibriKey:    colibriKey,
 	}, nil
 }

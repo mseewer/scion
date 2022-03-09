@@ -279,7 +279,7 @@ class GoGenerator(object):
             },
             'sd': {
                 'address': socket_address_str(ip, SD_API_PORT),
-                'force_local_address': True,
+                'bind_dialer_to_address': True,
             },
             'tracing': self._tracing_entry(),
             'metrics': {

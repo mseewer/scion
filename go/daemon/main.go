@@ -121,7 +121,7 @@ func realMain(ctx context.Context) error {
 	defer rcCleaner.Stop()
 
 	var localAddr *net.TCPAddr
-	if globalCfg.SD.ForceLocalAddress {
+	if globalCfg.SD.BindDialerToAddress {
 		localAddr, err = net.ResolveTCPAddr("tcp", globalCfg.SD.Address)
 		if err != nil {
 			return serrors.WrapStr("bad local address", err, "local_addr", globalCfg.SD.Address)
