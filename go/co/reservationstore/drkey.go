@@ -48,8 +48,8 @@ type macComputer interface {
 	ComputeRequestTransitMAC(ctx context.Context, req *base.Request) error
 
 	ComputeSegmentSetupRequestTransitMAC(ctx context.Context, req *segment.SetupReq) error
-	ComputeE2eRequestTransitMAC(ctx context.Context, req *e2e.Request) error
-	ComputeE2eSetupRequestTransitMAC(ctx context.Context, req *e2e.SetupReq) error
+	ComputeE2ERequestTransitMAC(ctx context.Context, req *e2e.Request) error
+	ComputeE2ESetupRequestTransitMAC(ctx context.Context, req *e2e.SetupReq) error
 
 	// ComputeResponseMAC takes the response (passed as an interface here) and computes and sets
 	// the authenticators inside it.
@@ -57,9 +57,9 @@ type macComputer interface {
 	ComputeResponseMAC(ctx context.Context, res base.Response, path *base.TransparentPath) error
 	ComputeSegmentSetupResponseMAC(ctx context.Context, res segment.SegmentSetupResponse,
 		path *base.TransparentPath) error
-	ComputeE2eResponseMAC(ctx context.Context, res base.Response, path *base.TransparentPath,
+	ComputeE2EResponseMAC(ctx context.Context, res base.Response, path *base.TransparentPath,
 		srcHost addr.HostAddr) error
-	ComputeE2eSetupResponseMAC(ctx context.Context, res e2e.SetupResponse,
+	ComputeE2ESetupResponseMAC(ctx context.Context, res e2e.SetupResponse,
 		path *base.TransparentPath, srcHost addr.HostAddr, rsvID *reservation.ID) error
 }
 
@@ -76,12 +76,12 @@ type macVerifier interface {
 	ValidateSegSetupRequest(ctx context.Context, req *segment.SetupReq) (bool, error)
 	// Validates a basic E2E request while in a transit AS.
 	// The authenticators were created on the source host.
-	ValidateE2eRequest(ctx context.Context, req *e2e.Request) (bool, error)
-	// ValidateE2eSetupRequest verifies the validity of the source authentication
+	ValidateE2ERequest(ctx context.Context, req *e2e.Request) (bool, error)
+	// ValidateE2ESetupRequest verifies the validity of the source authentication
 	// created by the initial AS for this particular transit AS as, for the immutable parts of
 	// this request. If the request is now at the last AS, it also validates the request at
 	// the destination. Returns true if valid, false otherwise.
-	ValidateE2eSetupRequest(ctx context.Context, req *e2e.SetupReq) (bool, error)
+	ValidateE2ESetupRequest(ctx context.Context, req *e2e.SetupReq) (bool, error)
 
 	ValidateResponse(ctx context.Context, res base.Response,
 		path *base.TransparentPath) (bool, error)
@@ -136,24 +136,24 @@ func (a *DrkeyAuthenticator) ComputeSegmentSetupRequestTransitMAC(ctx context.Co
 	return a.computeTransitMACforPayload(ctx, payload, &req.Request)
 }
 
-func (a *DrkeyAuthenticator) ComputeE2eRequestTransitMAC(ctx context.Context,
+func (a *DrkeyAuthenticator) ComputeE2ERequestTransitMAC(ctx context.Context,
 	req *e2e.Request) error {
 
 	if req.IsFirstAS() || req.IsLastAS() {
 		return nil
 	}
-	payload := inputTransitE2eRequest(req)
-	return a.computeTransitMACforE2ePayload(ctx, payload, req)
+	payload := inputTransitE2ERequest(req)
+	return a.computeTransitMACforE2EPayload(ctx, payload, req)
 }
 
-func (a *DrkeyAuthenticator) ComputeE2eSetupRequestTransitMAC(ctx context.Context,
+func (a *DrkeyAuthenticator) ComputeE2ESetupRequestTransitMAC(ctx context.Context,
 	req *e2e.SetupReq) error {
 
 	if req.IsFirstAS() || req.IsLastAS() {
 		return nil
 	}
-	payload := inputTransitE2eSetupRequest(req)
-	return a.computeTransitMACforE2ePayload(ctx, payload, &req.Request)
+	payload := inputTransitE2ESetupRequest(req)
+	return a.computeTransitMACforE2EPayload(ctx, payload, &req.Request)
 }
 
 func (a *DrkeyAuthenticator) ComputeResponseMAC(ctx context.Context,
@@ -188,7 +188,7 @@ func (a *DrkeyAuthenticator) ComputeSegmentSetupResponseMAC(ctx context.Context,
 	return nil
 }
 
-func (a *DrkeyAuthenticator) ComputeE2eResponseMAC(ctx context.Context, res base.Response,
+func (a *DrkeyAuthenticator) ComputeE2EResponseMAC(ctx context.Context, res base.Response,
 	path *base.TransparentPath, srcHost addr.HostAddr) error {
 
 	key, err := a.getDRKeyAS2Host(ctx, a.localIA, path.SrcIA(), srcHost)
@@ -206,7 +206,7 @@ func (a *DrkeyAuthenticator) ComputeE2eResponseMAC(ctx context.Context, res base
 	return nil
 }
 
-func (a *DrkeyAuthenticator) ComputeE2eSetupResponseMAC(ctx context.Context, res e2e.SetupResponse,
+func (a *DrkeyAuthenticator) ComputeE2ESetupResponseMAC(ctx context.Context, res e2e.SetupResponse,
 	path *base.TransparentPath, srcHost addr.HostAddr, rsvID *reservation.ID) error {
 
 	key, err := a.getDRKeyAS2Host(ctx, a.localIA, path.SrcIA(), srcHost)
@@ -252,7 +252,7 @@ func (a *DrkeyAuthenticator) ValidateSegSetupRequest(ctx context.Context,
 	return ok, err
 }
 
-func (a *DrkeyAuthenticator) ValidateE2eRequest(ctx context.Context, req *e2e.Request) (
+func (a *DrkeyAuthenticator) ValidateE2ERequest(ctx context.Context, req *e2e.Request) (
 	bool, error) {
 
 	if req.IsFirstAS() {
@@ -261,15 +261,15 @@ func (a *DrkeyAuthenticator) ValidateE2eRequest(ctx context.Context, req *e2e.Re
 	payload := make([]byte, req.Len())
 	req.Serialize(payload, base.SerializeImmutable)
 
-	ok, err := a.validateE2ePayloadInitialMAC(ctx, req, payload)
+	ok, err := a.validateE2EPayloadInitialMAC(ctx, req, payload)
 	if err == nil && ok && req.IsLastAS() {
-		ok, err = a.validateE2eRequestAtDestination(ctx, req)
+		ok, err = a.validateE2ERequestAtDestination(ctx, req)
 	}
 
 	return ok, err
 }
 
-func (a *DrkeyAuthenticator) ValidateE2eSetupRequest(ctx context.Context,
+func (a *DrkeyAuthenticator) ValidateE2ESetupRequest(ctx context.Context,
 	req *e2e.SetupReq) (bool, error) {
 
 	if req.IsFirstAS() {
@@ -278,9 +278,9 @@ func (a *DrkeyAuthenticator) ValidateE2eSetupRequest(ctx context.Context,
 	payload := make([]byte, req.Len())
 	req.Serialize(payload, base.SerializeImmutable)
 
-	ok, err := a.validateE2ePayloadInitialMAC(ctx, &req.Request, payload)
+	ok, err := a.validateE2EPayloadInitialMAC(ctx, &req.Request, payload)
 	if err == nil && ok && req.IsLastAS() {
-		ok, err = a.validateE2eSetupRequestAtDestination(ctx, req)
+		ok, err = a.validateE2ESetupRequestAtDestination(ctx, req)
 	}
 	return ok, err
 
@@ -345,19 +345,19 @@ func (a *DrkeyAuthenticator) validateSegmentSetupRequestAtDestination(ctx contex
 	})
 }
 
-func (a *DrkeyAuthenticator) validateE2eRequestAtDestination(ctx context.Context,
+func (a *DrkeyAuthenticator) validateE2ERequestAtDestination(ctx context.Context,
 	req *e2e.Request) (bool, error) {
 
 	return a.validateAtDestination(ctx, &req.Request, func(step int) []byte {
-		return inputTransitE2eRequest(req)
+		return inputTransitE2ERequest(req)
 	})
 }
 
-func (a *DrkeyAuthenticator) validateE2eSetupRequestAtDestination(ctx context.Context,
+func (a *DrkeyAuthenticator) validateE2ESetupRequestAtDestination(ctx context.Context,
 	req *e2e.SetupReq) (bool, error) {
 
 	return a.validateAtDestination(ctx, &req.Request.Request, func(step int) []byte {
-		return inputTransitE2eSetupRequestForStep(req, step)
+		return inputTransitE2ESetupRequestForStep(req, step)
 	})
 }
 
@@ -384,9 +384,9 @@ func (a *DrkeyAuthenticator) validateSegmentPayloadInitialMAC(ctx context.Contex
 	return true, nil
 }
 
-// validateE2ePayloadInitialMAC obtains the (fast side this) key according to req.Path and
+// validateE2EPayloadInitialMAC obtains the (fast side this) key according to req.Path and
 // uses them to compute the MAC from payload and compare it with the current req.Authenticators.
-func (a *DrkeyAuthenticator) validateE2ePayloadInitialMAC(ctx context.Context,
+func (a *DrkeyAuthenticator) validateE2EPayloadInitialMAC(ctx context.Context,
 	req *e2e.Request, immutableInput []byte) (bool, error) {
 
 	key, err := a.getDRKeyAS2Host(ctx, a.localIA, req.Path.SrcIA(), addr.HostFromIP(req.SrcHost))
@@ -494,7 +494,7 @@ func (a *DrkeyAuthenticator) computeTransitMACforPayload(ctx context.Context, pa
 	return err
 }
 
-func (a *DrkeyAuthenticator) computeTransitMACforE2ePayload(ctx context.Context, payload []byte,
+func (a *DrkeyAuthenticator) computeTransitMACforE2EPayload(ctx context.Context, payload []byte,
 	req *e2e.Request) error {
 
 	key, err := a.getDRKeyAS2AS(ctx, a.localIA, req.Path.DstIA())
@@ -592,22 +592,22 @@ func inputTransitSegSetupRequestForStep(req *segment.SetupReq, step int) []byte 
 	return buff[:len(buff)-remainingSteps*2]
 }
 
-func inputTransitE2eRequest(req *e2e.Request) []byte {
+func inputTransitE2ERequest(req *e2e.Request) []byte {
 	buff := make([]byte, req.Len())
 	req.Serialize(buff, base.SerializeSemiMutable)
 	return buff
 }
 
-func inputTransitE2eSetupRequest(req *e2e.SetupReq) []byte {
+func inputTransitE2ESetupRequest(req *e2e.SetupReq) []byte {
 	buff := make([]byte, req.Len()+len(req.AllocationTrail))
 	req.Serialize(buff, base.SerializeSemiMutable)
 	return buff
 }
 
-// inputTransitE2eSetupRequestForStep serializes the semi mutable fields of req as if it
+// inputTransitE2ESetupRequestForStep serializes the semi mutable fields of req as if it
 // were located at step `step`.
-func inputTransitE2eSetupRequestForStep(req *e2e.SetupReq, step int) []byte {
-	buff := inputTransitE2eSetupRequest(req)
+func inputTransitE2ESetupRequestForStep(req *e2e.SetupReq, step int) []byte {
+	buff := inputTransitE2ESetupRequest(req)
 	remainingSteps := len(req.AllocationTrail) - step - 1
 	return buff[:len(buff)-remainingSteps]
 }

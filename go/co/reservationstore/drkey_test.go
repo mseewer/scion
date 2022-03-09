@@ -38,7 +38,7 @@ import (
 	"github.com/scionproto/scion/go/lib/xtest"
 )
 
-func TestE2eBaseReqInitialMac(t *testing.T) {
+func TestE2EBaseReqInitialMac(t *testing.T) {
 	cases := map[string]struct {
 		clientReq  libcol.BaseRequest
 		transitReq e2e.Request
@@ -90,14 +90,14 @@ func TestE2eBaseReqInitialMac(t *testing.T) {
 				connector: daemon,
 			}
 			tc.transitReq.Path.CurrentStep = 1 // second AS, first transit AS
-			ok, err := auth.ValidateE2eRequest(ctx, &tc.transitReq)
+			ok, err := auth.ValidateE2ERequest(ctx, &tc.transitReq)
 			require.NoError(t, err)
 			require.True(t, ok)
 		})
 	}
 }
 
-func TestE2eSetupReqInitialMac(t *testing.T) {
+func TestE2ESetupReqInitialMac(t *testing.T) {
 	cases := map[string]struct {
 		clientReq  libcol.E2EReservationSetup
 		transitReq e2e.SetupReq
@@ -164,14 +164,14 @@ func TestE2eSetupReqInitialMac(t *testing.T) {
 				connector: daemon,
 			}
 			tc.transitReq.Path.CurrentStep = 1 // second AS, first transit AS
-			ok, err := auth.ValidateE2eSetupRequest(ctx, &tc.transitReq)
+			ok, err := auth.ValidateE2ESetupRequest(ctx, &tc.transitReq)
 			require.NoError(t, err)
 			require.True(t, ok)
 		})
 	}
 }
 
-func TestE2eRequestTransitMac(t *testing.T) {
+func TestE2ERequestTransitMac(t *testing.T) {
 	cases := map[string]struct {
 		transitReq e2e.Request
 	}{
@@ -210,7 +210,7 @@ func TestE2eRequestTransitMac(t *testing.T) {
 					localIA:   tc.transitReq.Path.Steps[step].IA,
 					connector: daemon,
 				}
-				err := auth.ComputeE2eRequestTransitMAC(ctx, &tc.transitReq)
+				err := auth.ComputeE2ERequestTransitMAC(ctx, &tc.transitReq)
 				require.NoError(t, err)
 			}
 
@@ -220,14 +220,14 @@ func TestE2eRequestTransitMac(t *testing.T) {
 				localIA:   tc.transitReq.Path.DstIA(),
 				connector: daemon,
 			}
-			ok, err := auth.validateE2eRequestAtDestination(ctx, &tc.transitReq)
+			ok, err := auth.validateE2ERequestAtDestination(ctx, &tc.transitReq)
 			require.NoError(t, err)
 			require.True(t, ok)
 		})
 	}
 }
 
-func TestE2eSetupRequestTransitMac(t *testing.T) {
+func TestE2ESetupRequestTransitMac(t *testing.T) {
 	cases := map[string]struct {
 		transitReq e2e.SetupReq
 	}{
@@ -278,7 +278,7 @@ func TestE2eSetupRequestTransitMac(t *testing.T) {
 					localIA:   tc.transitReq.Path.Steps[step].IA,
 					connector: daemon,
 				}
-				err := auth.ComputeE2eSetupRequestTransitMAC(ctx, &tc.transitReq)
+				err := auth.ComputeE2ESetupRequestTransitMAC(ctx, &tc.transitReq)
 				require.NoError(t, err)
 			}
 
@@ -288,7 +288,7 @@ func TestE2eSetupRequestTransitMac(t *testing.T) {
 				localIA:   tc.transitReq.Path.DstIA(),
 				connector: daemon,
 			}
-			ok, err := auth.validateE2eSetupRequestAtDestination(ctx, &tc.transitReq)
+			ok, err := auth.validateE2ESetupRequestAtDestination(ctx, &tc.transitReq)
 			require.NoError(t, err)
 			require.True(t, ok)
 		})
@@ -466,7 +466,7 @@ func TestComputeAndValidateSegmentSetupResponse(t *testing.T) {
 	}
 }
 
-func TestComputeAndValidateE2eResponseError(t *testing.T) {
+func TestComputeAndValidateE2EResponseError(t *testing.T) {
 	cases := map[string]struct {
 		timestamp time.Time
 		response  base.Response
@@ -524,7 +524,7 @@ func TestComputeAndValidateE2eResponseError(t *testing.T) {
 					}
 				}
 
-				err := auth.ComputeE2eResponseMAC(ctx, tc.response, tc.path,
+				err := auth.ComputeE2EResponseMAC(ctx, tc.response, tc.path,
 					addr.HostFromIP(tc.srcHost))
 				require.NoError(t, err)
 			}
@@ -545,7 +545,7 @@ func TestComputeAndValidateE2eResponseError(t *testing.T) {
 	}
 }
 
-func TestComputeAndValidateE2eSetupResponse(t *testing.T) {
+func TestComputeAndValidateE2ESetupResponse(t *testing.T) {
 	cases := map[string]struct {
 		timestamp time.Time
 		response  e2e.SetupResponse
@@ -648,7 +648,7 @@ func TestComputeAndValidateE2eSetupResponse(t *testing.T) {
 					localIA:   step.IA,
 					connector: daemon,
 				}
-				err := auth.ComputeE2eSetupResponseMAC(ctx, tc.response, tc.path,
+				err := auth.ComputeE2ESetupResponseMAC(ctx, tc.response, tc.path,
 					addr.HostFromIP(tc.srcHost), tc.rsvID)
 				require.NoError(t, err)
 			}

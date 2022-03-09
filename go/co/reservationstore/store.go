@@ -838,7 +838,7 @@ func (s *Store) AdmitE2EReservation(ctx context.Context, req *e2e.SetupReq) (
 	log.Debug("e2e admission request", "id", req.ID, "path", req.Path,
 		"segments", reservation.IDs(req.SegmentRsvs), "curr_segment", req.CurrentSegmentRsvIndex)
 
-	if err := s.authenticateE2eSetupReq(ctx, req); err != nil {
+	if err := s.authenticateE2ESetupReq(ctx, req); err != nil {
 		return nil, s.errWrapStr("error validating request", err, "id", req.ID.String())
 	}
 
@@ -1015,7 +1015,7 @@ func (s *Store) AdmitE2EReservation(ctx context.Context, req *e2e.SetupReq) (
 			// indicate the next node we are using the next segment:
 			req.CurrentSegmentRsvIndex++
 		}
-		if err := s.authenticator.ComputeE2eSetupRequestTransitMAC(ctx, req); err != nil {
+		if err := s.authenticator.ComputeE2ESetupRequestTransitMAC(ctx, req); err != nil {
 			return nil, serrors.WrapStr("computing in transit e2e setup request authenticator", err)
 		}
 		// authenticate request for the destination AS
@@ -1073,7 +1073,7 @@ func (s *Store) AdmitE2EReservation(ctx context.Context, req *e2e.SetupReq) (
 	res.Token = token.ToRaw()
 
 	// create authenticators before passing the response to the previous node in the path
-	if err := s.authenticator.ComputeE2eSetupResponseMAC(ctx, res, req.Path,
+	if err := s.authenticator.ComputeE2ESetupResponseMAC(ctx, res, req.Path,
 		addr.HostFromIP(req.SrcHost), &req.ID); err != nil {
 		return failedResponse, s.errWrapStr("computing authenticators for response", err)
 	}
@@ -1085,7 +1085,7 @@ func (s *Store) AdmitE2EReservation(ctx context.Context, req *e2e.SetupReq) (
 func (s *Store) CleanupE2EReservation(ctx context.Context, req *e2e.Request) (
 	base.Response, error) {
 
-	if err := s.authenticateE2eReq(ctx, req); err != nil {
+	if err := s.authenticateE2EReq(ctx, req); err != nil {
 		return nil, s.errWrapStr("error validating request", err, "id", req.ID.String())
 	}
 
@@ -1156,7 +1156,7 @@ func (s *Store) CleanupE2EReservation(ctx context.Context, req *e2e.Request) (
 		return res, nil
 	}
 	// authenticate the semi mutable parts of the request, to be validated at the destination
-	if err := s.authenticator.ComputeE2eRequestTransitMAC(ctx, req); err != nil {
+	if err := s.authenticator.ComputeE2ERequestTransitMAC(ctx, req); err != nil {
 		return nil, serrors.WrapStr("computing in transit e2e base request authenticator", err)
 	}
 	// forward to next colibri service
@@ -1233,9 +1233,9 @@ func (s *Store) authenticateSegSetupReq(ctx context.Context, req *segment.SetupR
 	return nil
 }
 
-// authenticateE2eReq checks that the authenticators are correct.
-func (s *Store) authenticateE2eReq(ctx context.Context, req *e2e.Request) error {
-	ok, err := s.authenticator.ValidateE2eRequest(ctx, req)
+// authenticateE2EReq checks that the authenticators are correct.
+func (s *Store) authenticateE2EReq(ctx context.Context, req *e2e.Request) error {
+	ok, err := s.authenticator.ValidateE2ERequest(ctx, req)
 	if err != nil {
 		return serrors.WrapStr("validating source authentication mac", err)
 	}
@@ -1246,9 +1246,9 @@ func (s *Store) authenticateE2eReq(ctx context.Context, req *e2e.Request) error 
 	return nil
 }
 
-// authenticateE2eSetupReq checks that the authenticators are correct.
-func (s *Store) authenticateE2eSetupReq(ctx context.Context, req *e2e.SetupReq) error {
-	ok, err := s.authenticator.ValidateE2eSetupRequest(ctx, req)
+// authenticateE2ESetupReq checks that the authenticators are correct.
+func (s *Store) authenticateE2ESetupReq(ctx context.Context, req *e2e.SetupReq) error {
+	ok, err := s.authenticator.ValidateE2ESetupRequest(ctx, req)
 	if err != nil {
 		return serrors.WrapStr("validating source authentication mac", err)
 	}
@@ -1591,8 +1591,8 @@ func freeAfterTransfer(ctx context.Context, tx backend.Transaction, rsv *e2e.Res
 		}
 	}
 	ratio := float64(seg1.ActiveIndex().AllocBW.ToKbps()) / float64(total)
-	// effectiveE2eTraffic is the minimum BW that e2e rsvs can use
-	effectiveE2eTraffic := float64(seg2.ActiveIndex().AllocBW.ToKbps()) * ratio
+	// effectiveE2ETraffic is the minimum BW that e2e rsvs can use
+	effectiveE2ETraffic := float64(seg2.ActiveIndex().AllocBW.ToKbps()) * ratio
 
 	e2es, err := tx.GetE2ERsvsOnSegRsv(ctx, &seg2.ID)
 	if err != nil {
@@ -1603,10 +1603,10 @@ func freeAfterTransfer(ctx context.Context, tx backend.Transaction, rsv *e2e.Res
 		alreadyUsed -= int64(rsv.AllocResv()) // do not count this rsv's BW
 	}
 	// the available BW for this e2e rsv is the effective minus the already used
-	avail := int64(effectiveE2eTraffic) - alreadyUsed
+	avail := int64(effectiveE2ETraffic) - alreadyUsed
 	if avail < 0 {
 		log.Error("internal error: negative result in free after transfer",
-			"ratio", ratio, "effective", effectiveE2eTraffic, "renewal", renewal,
+			"ratio", ratio, "effective", effectiveE2ETraffic, "renewal", renewal,
 			"already_used", alreadyUsed, "this_rsv_alloc", rsv.AllocResv())
 		avail = 0
 	}

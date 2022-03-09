@@ -38,9 +38,9 @@ service ColibriService {
     // list segment reservations registered in this AS.
     rpc ListReservations(ListReservationsRequest) returns (ListReservationsResponse) {}
     // set up or renew an EER.
-    rpc E2eSetup(E2eSetupRequest) returns (E2eSetupResponse) {}
+    rpc E2ESetup(E2ESetupRequest) returns (E2ESetupResponse) {}
     // clean up an EER index.
-    rpc CleanupE2eIndex(CleanupE2eIndexRequest) returns (CleanupE2eIndexResponse) {}
+    rpc CleanupE2EIndex(CleanupE2EIndexRequest) returns (CleanupE2EIndexResponse) {}
 
     // Intra AS RPCs:
     // list segment resrvations.
@@ -272,7 +272,7 @@ message ListReservationsResponse {
 }
 
 
-message E2eRequest {
+message E2ERequest {
     // the basic request
     Request base = 1;
     // address of the source host.
@@ -281,7 +281,7 @@ message E2eRequest {
     bytes dst_host = 3;
 }
 
-message E2eSetupRequest {
+message E2ESetupRequest {
     message PathParams {
         // the IDs of the segments to stitch for this e2e reservation, in traversal order.
         repeated ReservationID segments = 1;
@@ -289,30 +289,30 @@ message E2eSetupRequest {
         // If the node is transfer, the first segment it belongs to.
         uint32 current_segment = 2;
     }
-    message E2eSetupBead {
+    message E2ESetupBead {
         // each on path AS writes here the max. BW it's willing to give.
         uint32 maxbw = 1;
     }
 
     // the base request. The path included here is from src to dst, so the full path.
-    E2eRequest base = 1;
+    E2ERequest base = 1;
     // the requested bw.
     uint32 requested_bw = 2;
     // the parameters of the request.
     PathParams params = 3;
     // the allocation trail. All on path ASes will write an entry,
     // to know which AS are willing to grant how much.
-    repeated E2eSetupBead allocationtrail = 4;
+    repeated E2ESetupBead allocationtrail = 4;
 }
 
-message E2eSetupResponse {
+message E2ESetupResponse {
     message Failure {
         // a human readable error message.
         string message = 1;
         // the index of the path step that originated an error.
         uint32 failed_step = 2;
         // the allocation trail, as described above.
-        repeated E2eSetupRequest.E2eSetupBead allocationtrail = 3;
+        repeated E2ESetupRequest.E2ESetupBead allocationtrail = 3;
     }
     // if present: information about the failure
     Failure failure = 1;
@@ -324,12 +324,12 @@ message E2eSetupResponse {
     Authenticators authenticators = 4;
 }
 
-message CleanupE2eIndexRequest {
+message CleanupE2EIndexRequest {
     // the basic request
-    E2eRequest base = 1;
+    E2ERequest base = 1;
 }
 
-message CleanupE2eIndexResponse {
+message CleanupE2EIndexResponse {
     // the basic response
     Response base = 1;
 }
