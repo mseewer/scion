@@ -141,7 +141,7 @@ func setupColibri(g *errgroup.Group, cfg *config.Config, cfgObjs *cfgObjs, topo 
 		Delta: cfg.Colibri.Delta,
 	}
 	colibriStore, err := reservationstore.NewStore(topo, cfgObjs.stack.Daemon,
-		cfgObjs.stack.Router, cfgObjs.stack.Dialer, db, admitter, cfgObjs.masterKey.Key0)
+		cfgObjs.stack.Router, cfgObjs.stack.GRPCDialer, db, admitter, cfgObjs.masterKey.Key0)
 	if err != nil {
 		return nil, serrors.WrapStr("initializing colibri store", err)
 	}

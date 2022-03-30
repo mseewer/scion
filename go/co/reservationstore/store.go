@@ -38,6 +38,7 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology"
 	"github.com/scionproto/scion/go/lib/util"
+	libgrpc "github.com/scionproto/scion/go/pkg/grpc"
 	colpb "github.com/scionproto/scion/go/pkg/proto/colibri"
 )
 
@@ -58,7 +59,7 @@ var _ reservationstorage.Store = (*Store)(nil)
 
 // NewStore creates a new reservation store.
 func NewStore(topo *topology.Loader, sd daemon.Connector, router snet.Router,
-	dialer coliquic.GRPCClientDialer, db backend.DB, admitter admission.Admitter,
+	dialer libgrpc.Dialer, db backend.DB, admitter admission.Admitter,
 	masterKey []byte) (*Store, error) {
 
 	// check that the admitter is well configured
