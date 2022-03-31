@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"time"
 
 	base "github.com/scionproto/scion/go/co/reservation"
@@ -32,13 +33,13 @@ import (
 	"github.com/scionproto/scion/go/lib/colibri/coliquic"
 	"github.com/scionproto/scion/go/lib/colibri/reservation"
 	"github.com/scionproto/scion/go/lib/daemon"
+	"github.com/scionproto/scion/go/lib/infra/messenger"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/scrypto"
 	"github.com/scionproto/scion/go/lib/serrors"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology"
 	"github.com/scionproto/scion/go/lib/util"
-	libgrpc "github.com/scionproto/scion/go/pkg/grpc"
 	colpb "github.com/scionproto/scion/go/pkg/proto/colibri"
 )
 
@@ -58,9 +59,16 @@ type Store struct {
 var _ reservationstorage.Store = (*Store)(nil)
 
 // NewStore creates a new reservation store.
-func NewStore(topo *topology.Loader, sd daemon.Connector, router snet.Router,
-	dialer libgrpc.Dialer, db backend.DB, admitter admission.Admitter,
-	masterKey []byte) (*Store, error) {
+func NewStore(
+	topo *topology.Loader,
+	pconn net.PacketConn,
+	sd daemon.Connector,
+	router snet.Router,
+	resolver messenger.Resolver,
+	db backend.DB,
+	admitter admission.Admitter,
+	masterKey []byte) (
+	*Store, error) {
 
 	// check that the admitter is well configured
 	cap := admitter.Capacities()
@@ -69,7 +77,8 @@ func NewStore(topo *topology.Loader, sd daemon.Connector, router snet.Router,
 			"ingress", cap.CapacityIngress(uint16(ifid)),
 			"egress", cap.CapacityEgress(uint16(ifid)))
 	}
-	operator, err := coliquic.NewServiceClientOperator(topo, router, dialer)
+	// client manager will find/build the right gRPC client used in every RPC
+	operator, err := coliquic.NewServiceClientOperator(topo, pconn, router, resolver)
 	if err != nil {
 		return nil, err
 	}
