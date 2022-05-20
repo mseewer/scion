@@ -91,14 +91,17 @@ type ServerStack struct {
 	serverNet    *snet.SCIONNetwork
 }
 
-func NewServerStack(ctx context.Context, serverAddr *snet.UDPAddr, daemonAddr string, dispatcherSocket string) (
+func NewServerStack(
+	ctx context.Context, serverAddr *snet.UDPAddr, daemonAddr string, dispatcherSocket string) (
 	*ServerStack, error) {
 	s := &ServerStack{}
 	err := s.init(ctx, serverAddr, daemonAddr, dispatcherSocket)
 	return s, err
 }
 
-func (s *ServerStack) init(ctx context.Context, serverAddr *snet.UDPAddr, daemonAddr string, dispatcherSocket string) error {
+func (s *ServerStack) init(
+	ctx context.Context, serverAddr *snet.UDPAddr, daemonAddr string, dispatcherSocket string,
+) error {
 
 	var err error
 	if s.clientNet != nil {
@@ -165,7 +168,8 @@ func (s *ServerStack) init(ctx context.Context, serverAddr *snet.UDPAddr, daemon
 func (s *ServerStack) initQUICSockets(ctx context.Context, dispatcherSocket string) (
 	net.PacketConn, net.PacketConn, error) {
 
-	reconnectingDispatcher := reconnect.NewDispatcherService(reliable.NewDispatcher(dispatcherSocket))
+	reconnectingDispatcher := reconnect.NewDispatcherService(
+		reliable.NewDispatcher(dispatcherSocket))
 
 	revocationHandler := daemon.RevHandler{Connector: s.Daemon}
 
