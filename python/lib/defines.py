@@ -29,6 +29,8 @@ IFIDS_FILE = "ifids.yml"
 AS_LIST_FILE = "as_list.yml"
 #: Prometheus config
 PROM_FILE = "prometheus.yml"
+#: BR name mapping
+BR_NAMES_FILE = "br_names.yml"
 
 #: Default SCION router UDP port.
 SCION_ROUTER_PORT = 50000
