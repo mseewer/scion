@@ -17,10 +17,12 @@
 =============================================
 """
 # Stdlib
+from collections import defaultdict
 import configparser
 import json
 import logging
 import os
+import pathlib
 import sys
 from io import StringIO
 from typing import Mapping
@@ -73,6 +75,12 @@ class ConfigGenerator(object):
         """
         self.args = args
         self.topo_config = load_yaml_file(self.args.topo_config)
+        self.use_intra = self.args.intra_config is not None
+        self.intra_config = None
+        self.intra_topo_dicts = defaultdict(lambda: None)
+        if self.use_intra:
+            self.intra_config_file = self.args.intra_config
+            self.intra_config = load_yaml_file(self.args.intra_config)
         if self.args.sig and not self.args.docker:
             logging.critical("Cannot use sig without docker!")
             sys.exit(1)
@@ -83,9 +91,16 @@ class ConfigGenerator(object):
         """
         Configure default network.
         """
+        network4 = DEFAULT_NETWORK
+        network6 = DEFAULT6_NETWORK
+        if network and '.' in network:
+            network4 = network
+        if network and ':' in network:
+            network6 = network
+
         defaults = self.topo_config.get("defaults", {})
-        self.subnet_gen4 = SubnetGenerator(DEFAULT_NETWORK, self.args.docker)
-        self.subnet_gen6 = SubnetGenerator(DEFAULT6_NETWORK, self.args.docker)
+        self.subnet_gen4 = SubnetGenerator(network4, self.args.docker)
+        self.subnet_gen6 = SubnetGenerator(network6, self.args.docker)
         self.default_mtu = defaults.get("mtu", DEFAULT_MTU)
 
     def generate_all(self):
@@ -93,11 +108,200 @@ class ConfigGenerator(object):
         Generate all needed files.
         """
         self._ensure_uniq_ases()
+        if self.use_intra:
+            self._ensure_correct_format()
         topo_dicts, self.all_networks = self._generate_topology()
         self.networks = remove_v4_nets(self.all_networks)
         self._generate_with_topo(topo_dicts)
         self._write_networks_conf(self.networks, NETWORKS_FILE)
         self._write_sciond_conf(self.networks, SCIOND_ADDRESSES_FILE)
+
+
+    def remove_unused_BR(self, intra_topo_dict, asStr):
+
+        BR_used = list(self.intra_config["ASes"][asStr]['Borderrouter'].keys())
+        intra_topo_dict['Nodes']['Borderrouter'] = [BR for BR in intra_topo_dict['Nodes']['Borderrouter'] if BR in BR_used]
+        all_nodes = []
+        for _, node_list in intra_topo_dict['Nodes'].items():
+            all_nodes.extend(node_list)
+
+        link_list = intra_topo_dict['links']
+        for link in link_list:
+            if link['a'] not in all_nodes or link['b'] not in all_nodes:
+                link_list.remove(link)
+        intra_topo_dict['links'] = link_list
+
+        return intra_topo_dict
+
+    def _ensure_correct_format(self):
+        # we know that AS are unique 
+        self.check_AS_internal_topology()
+
+        for asStr, config in self.intra_config["ASes"].items():
+            intra_topo_file = pathlib.Path(config["Intra-Topology"])
+            borderrouters = config["Borderrouter"]
+            self.check_all_BR_defined(asStr, borderrouters)
+            if not intra_topo_file.is_absolute():
+                intra_config_folder = pathlib.Path(self.intra_config_file).parent
+                intra_topo_file = pathlib.Path(intra_config_folder, intra_topo_file)
+            
+            if not intra_topo_file.is_file():
+                logging.critical("Intra topology file '%s' not found", intra_topo_file)
+                sys.exit(1)
+
+            intra_topo_dict = load_yaml_file(intra_topo_file)
+            
+            self.check_file_format(intra_topo_dict)
+
+            self.check_node_naming(intra_topo_dict, borderrouters)
+            # check if links have start + end node that are defined in the intra topology
+            self.check_links(intra_topo_dict)
+            # now check if SCION nodes only have 1 internal connection
+            self.check_NR_connections(intra_topo_dict, borderrouters)
+
+            intra_topo_dict = self.remove_unused_BR(intra_topo_dict, asStr)
+            self.intra_topo_dicts[asStr] = intra_topo_dict
+
+    def check_AS_internal_topology(self):       
+        ASes = set()
+        for asStr in self.topo_config["ASes"]:
+            ASes.add(asStr)
+
+        for asStr in self.intra_config["ASes"]:
+            if asStr not in ASes:
+                logging.critical("AS '%s' not found in topology", asStr)
+                sys.exit(1)
+            ASes.remove(asStr)
+        
+        if len(ASes) != 0:
+            logging.critical("Not all AS defined in intra topology: %s", ASes)
+            sys.exit(1)
+
+    def check_all_BR_defined(self, asStr, borderrouters):
+        inter_AS_links = self.topo_config.get('links', {})
+        SCION_BRs = set()
+        for link in inter_AS_links:
+            a = link['a']
+            b = link['b']
+
+            for x in [a, b]:
+                if x.startswith(asStr):
+                    x_no_itf = x.split('#')[0]
+                    x_split = x_no_itf.split('-')
+                    if len(x_split) == 3: 
+                        # specific ID is given
+                        # don't save interface, because this BR will have multiple interfaces
+                       SCION_BRs.add(x_no_itf)
+                    else:
+                        # no specific ID is given, save all interfaces
+                        SCION_BRs.add(x)
+
+        for internal_name, topo_name in borderrouters.items():
+            if topo_name not in SCION_BRs:
+                logging.critical("Borderrouter '%s' not found in topology", topo_name)
+                sys.exit(1)
+            SCION_BRs.remove(topo_name)
+
+        if len(SCION_BRs) != 0:
+            logging.critical("Not all Borderrouters defined in intra topology: %s", SCION_BRs)
+            sys.exit(1)
+
+    def check_file_format(self, intra_topo_dict):
+        nodes = intra_topo_dict.get('Nodes')
+        possible_categories = set(['Colibri', 'Control-Service', 'SCION-Daemon', 'Borderrouter', 'Client', 'Internal-Router'])
+        actual_categories = set(nodes.keys())
+        if possible_categories != actual_categories:
+            logging.critical("Wrong categories or not all categories defined in intra topology.")
+            sys.exit(1)
+
+        for node_type, node_list in nodes.items():
+            if len(node_list) == 0:
+                logging.critical("No node defined in category: %s, in intra topology", node_type)
+                sys.exit(1)
+
+    def check_node_naming(self, intra_topo_dict, borderrouters):
+        nodes = intra_topo_dict["Nodes"]
+        seen = set()
+        topo_BR = []
+        for node_type, node_list in nodes.items():
+            if node_type == "Borderrouter":
+                topo_BR = node_list
+            for node in node_list:
+                if node in seen:
+                    logging.critical("Non-unique Node name '%s'", node)
+                    sys.exit(1)
+                seen.add(node)
+        # check if borderrouters in intra.config are a sublist of this node_list
+        if not (set(borderrouters.keys()) <= set(topo_BR)):
+            logging.critical("Not all Borderrouter names defined in intra topology!")
+            sys.exit(1)
+
+
+    def check_links(self, intra_topo_dict):
+        nodes = intra_topo_dict["Nodes"]
+        node_names = []
+        for node_type, node_list in nodes.items():
+            for node in node_list:
+                node_names.append(node)
+
+        links = intra_topo_dict["links"]
+        for link in links:
+            a = link['a']
+            b = link['b']
+            if a not in node_names:
+                logging.critical("Node '%s' not found in intra topology, but used in links", a)
+                sys.exit(1)
+            if b not in node_names:
+                logging.critical("Node '%s' not found in intra topology, but used in links", b)
+                sys.exit(1)
+
+
+
+    def check_NR_connections(self, intra_topo_dict, borderrouters):
+        nodes = intra_topo_dict["Nodes"]
+        NR_connections = {}
+        nodes_connections_OK = []
+        for node_type, node_list in nodes.items():
+            if node_type == "Internal-Router":
+                nodes_connections_OK.extend(node_list)
+
+            for node in node_list:
+                NR_connections[node] = 0
+       
+        print(NR_connections)
+        topo_links = intra_topo_dict["links"]
+        for link in topo_links:
+            a = link['a']
+            b = link['b']
+
+            # don't count links with undefined BRs
+            if a in nodes['Borderrouter'] and a not in borderrouters.keys():
+                nodes_connections_OK.append(a)
+                continue
+            if b in nodes['Borderrouter'] and b not in borderrouters.keys():
+                nodes_connections_OK.append(b)
+                continue
+
+            if a not in nodes_connections_OK and b not in nodes_connections_OK:
+                logging.critical('Link between %s and %s is not allowed in intra topology, use internal-router to connect them.', a, b)
+
+            NR_connections[a] += 1
+            NR_connections[b] += 1
+
+
+        print(NR_connections)
+        for node, total_links in NR_connections.items():
+            if node in nodes_connections_OK:
+                continue
+
+            if total_links > 1: 
+                logging.critical("Node '%s' can't have more than 1 internal link", node)
+                sys.exit(1)
+
+            if total_links == 0: 
+                logging.critical("Node '%s' not allow to have 0 internal links", node)
+                sys.exit(1)
+
 
     def _ensure_uniq_ases(self):
         seen = set()
@@ -147,8 +351,8 @@ class ConfigGenerator(object):
         return topo_gen.generate()
 
     def _topo_args(self):
-        return TopoGenArgs(self.args, self.topo_config, self.subnet_gen4,
-                           self.subnet_gen6, self.default_mtu)
+        return TopoGenArgs(self.args, self.topo_config, self.intra_config, self.intra_topo_dicts,
+                           self.subnet_gen4, self.subnet_gen6, self.default_mtu)
 
     def _generate_supervisor(self, topo_dicts):
         args = self._supervisor_args(topo_dicts)
