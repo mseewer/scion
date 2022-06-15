@@ -144,18 +144,18 @@ class ConfigGenerator(object):
                 intra_topo_file = pathlib.Path(intra_config_folder, intra_topo_file)
             
             if not intra_topo_file.is_file():
-                logging.critical("Intra topology file '%s' not found", intra_topo_file)
+                logging.critical("ERROR for AS %s: Intra topology file '%s' not found", asStr, intra_topo_file)
                 sys.exit(1)
 
             intra_topo_dict = load_yaml_file(intra_topo_file)
             
-            self.check_file_format(intra_topo_dict)
+            self.check_file_format(intra_topo_dict, asStr)
 
-            self.check_node_naming(intra_topo_dict, borderrouters)
+            self.check_node_naming(intra_topo_dict, borderrouters, asStr)
             # check if links have start + end node that are defined in the intra topology
-            self.check_links(intra_topo_dict)
+            self.check_links(intra_topo_dict, asStr)
             # now check if SCION nodes only have 1 internal connection
-            self.check_NR_connections(intra_topo_dict, borderrouters)
+            self.check_NR_connections(intra_topo_dict, asStr)
 
             intra_topo_dict = self.remove_unused_BR(intra_topo_dict, asStr)
             self.intra_topo_dicts[asStr] = intra_topo_dict
@@ -172,7 +172,7 @@ class ConfigGenerator(object):
             ASes.remove(asStr)
         
         if len(ASes) != 0:
-            logging.critical("Not all AS defined in intra topology: %s", ASes)
+            logging.critical("Not all ASes defined in intra topology: %s", ASes)
             sys.exit(1)
 
     def check_all_BR_defined(self, asStr, borderrouters):
@@ -189,35 +189,43 @@ class ConfigGenerator(object):
                     if len(x_split) == 3: 
                         # specific ID is given
                         # don't save interface, because this BR will have multiple interfaces
-                       SCION_BRs.add(x_no_itf)
+                        SCION_BRs.add(x_no_itf)
                     else:
                         # no specific ID is given, save all interfaces
                         SCION_BRs.add(x)
 
         for internal_name, topo_name in borderrouters.items():
             if topo_name not in SCION_BRs:
-                logging.critical("Borderrouter '%s' not found in topology", topo_name)
+                logging.critical("ERROR: AS %s: Borderrouter '%s' not found in topology", asStr, topo_name)
                 sys.exit(1)
             SCION_BRs.remove(topo_name)
 
         if len(SCION_BRs) != 0:
-            logging.critical("Not all Borderrouters defined in intra topology: %s", SCION_BRs)
+            logging.critical("ERROR: AS %s: Not all Borderrouters defined in intra topology: %s", asStr, SCION_BRs)
             sys.exit(1)
 
-    def check_file_format(self, intra_topo_dict):
+    def check_file_format(self, intra_topo_dict, asStr):
         nodes = intra_topo_dict.get('Nodes')
         possible_categories = set(['Colibri', 'Control-Service', 'SCION-Daemon', 'Borderrouter', 'Client', 'Internal-Router'])
         actual_categories = set(nodes.keys())
         if possible_categories != actual_categories:
-            logging.critical("Wrong categories or not all categories defined in intra topology.")
+            logging.critical("ERROR: AS %s: Wrong categories or not all categories defined in intra topology. \nPossible categories are %s", asStr, possible_categories)
             sys.exit(1)
 
         for node_type, node_list in nodes.items():
-            if len(node_list) == 0:
-                logging.critical("No node defined in category: %s, in intra topology", node_type)
+            node_list = [node for node in node_list if node is not None ]
+            if not node_list or len(node_list) == 0:
+                logging.critical("ERROR: AS %s: No node defined in category: '%s', in intra topology", asStr, node_type)
+                sys.exit(1)
+            
+            if node_type == 'Colibri' and len(node_list) > 1:
+                logging.critical("ERROR: AS %s: More than one Colibri defined in intra topology", asStr)
+                sys.exit(1)
+            if node_type == 'Control-Service' and len(node_list) > 1:
+                logging.critical("ERROR: AS %s: More than one Control-Service defined in intra topology", asStr)
                 sys.exit(1)
 
-    def check_node_naming(self, intra_topo_dict, borderrouters):
+    def check_node_naming(self, intra_topo_dict, borderrouters, asStr):
         nodes = intra_topo_dict["Nodes"]
         seen = set()
         topo_BR = []
@@ -226,78 +234,60 @@ class ConfigGenerator(object):
                 topo_BR = node_list
             for node in node_list:
                 if node in seen:
-                    logging.critical("Non-unique Node name '%s'", node)
+                    logging.critical("ERROR: AS %s: Non-unique Node name '%s' in intra topology", asStr, node)
                     sys.exit(1)
                 seen.add(node)
         # check if borderrouters in intra.config are a sublist of this node_list
         if not (set(borderrouters.keys()) <= set(topo_BR)):
-            logging.critical("Not all Borderrouter names defined in intra topology!")
+            logging.critical("ERROR: AS %s: Not all Borderrouter names defined in intra topology!", asStr)
             sys.exit(1)
 
 
-    def check_links(self, intra_topo_dict):
+    def check_links(self, intra_topo_dict, asStr):
         nodes = intra_topo_dict["Nodes"]
         node_names = []
         for node_type, node_list in nodes.items():
-            for node in node_list:
-                node_names.append(node)
+            node_names.extend(node_list)
 
         links = intra_topo_dict["links"]
         for link in links:
             a = link['a']
             b = link['b']
             if a not in node_names:
-                logging.critical("Node '%s' not found in intra topology, but used in links", a)
+                logging.critical("ERROR: AS %s: Node '%s' not found in intra topology, but used in links", asStr, a)
                 sys.exit(1)
             if b not in node_names:
-                logging.critical("Node '%s' not found in intra topology, but used in links", b)
+                logging.critical("ERROR: AS %s: Node '%s' not found in intra topology, but used in links", asStr, b)
                 sys.exit(1)
 
 
 
-    def check_NR_connections(self, intra_topo_dict, borderrouters):
+    def check_NR_connections(self, intra_topo_dict, asStr):
         nodes = intra_topo_dict["Nodes"]
         NR_connections = {}
-        nodes_connections_OK = []
         for node_type, node_list in nodes.items():
-            if node_type == "Internal-Router":
-                nodes_connections_OK.extend(node_list)
-
             for node in node_list:
                 NR_connections[node] = 0
        
-        print(NR_connections)
         topo_links = intra_topo_dict["links"]
         for link in topo_links:
             a = link['a']
             b = link['b']
 
-            # don't count links with undefined BRs
-            if a in nodes['Borderrouter'] and a not in borderrouters.keys():
-                nodes_connections_OK.append(a)
-                continue
-            if b in nodes['Borderrouter'] and b not in borderrouters.keys():
-                nodes_connections_OK.append(b)
-                continue
-
-            if a not in nodes_connections_OK and b not in nodes_connections_OK:
-                logging.critical('Link between %s and %s is not allowed in intra topology, use internal-router to connect them.', a, b)
+            if a not in nodes["Internal-Router"] and b not in nodes["Internal-Router"]:
+                logging.critical('ERROR: AS %s: Link between %s and %s is not allowed in intra topology, use internal-router to connect them.', asStr, a, b)
+                sys.exit(1)
 
             NR_connections[a] += 1
             NR_connections[b] += 1
 
-
-        print(NR_connections)
         for node, total_links in NR_connections.items():
-            if node in nodes_connections_OK:
-                continue
-
-            if total_links > 1: 
-                logging.critical("Node '%s' can't have more than 1 internal link", node)
+            if total_links > 1 and node not in nodes["Internal-Router"]: 
+                logging.critical("ERROR: AS %s: Node '%s' can't have more than 1 internal link", asStr, node)
                 sys.exit(1)
 
             if total_links == 0: 
-                logging.critical("Node '%s' not allow to have 0 internal links", node)
+                logging.critical("ERROR: AS %s: Node '%s' not allow to have 0 internal links", asStr, node)
                 sys.exit(1)
 
 
