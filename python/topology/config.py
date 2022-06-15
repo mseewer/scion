@@ -152,13 +152,13 @@ class ConfigGenerator(object):
             self.check_file_format(intra_topo_dict, asStr)
 
             self.check_node_naming(intra_topo_dict, borderrouters, asStr)
+
+            intra_topo_dict = self.remove_unused_BR(intra_topo_dict, asStr)
+            self.intra_topo_dicts[asStr] = intra_topo_dict
             # check if links have start + end node that are defined in the intra topology
             self.check_links(intra_topo_dict, asStr)
             # now check if SCION nodes only have 1 internal connection
             self.check_NR_connections(intra_topo_dict, asStr)
-
-            intra_topo_dict = self.remove_unused_BR(intra_topo_dict, asStr)
-            self.intra_topo_dicts[asStr] = intra_topo_dict
 
     def check_AS_internal_topology(self):       
         ASes = set()
@@ -233,6 +233,12 @@ class ConfigGenerator(object):
             if node_type == "Borderrouter":
                 topo_BR = node_list
             for node in node_list:
+                if type(node) != str:
+                    logging.critical("ERROR: AS %s: Node name is not a string: %s", asStr, node)
+                    sys.exit(1)
+                if len(node) > 8:
+                    logging.critical("ERROR: AS %s: Node name '%s' is too long", asStr, node)
+                    sys.exit(1)
                 if node in seen:
                     logging.critical("ERROR: AS %s: Non-unique Node name '%s' in intra topology", asStr, node)
                     sys.exit(1)
