@@ -125,11 +125,9 @@ class ConfigGenerator(object):
         for _, node_list in intra_topo_dict['Nodes'].items():
             all_nodes.extend(node_list)
 
-        link_list = intra_topo_dict['links']
-        for link in link_list:
+        for link in list(intra_topo_dict['links']):
             if link['a'] not in all_nodes or link['b'] not in all_nodes:
-                link_list.remove(link)
-        intra_topo_dict['links'] = link_list
+                intra_topo_dict['links'].remove(link)
 
         return intra_topo_dict
 
