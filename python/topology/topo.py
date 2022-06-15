@@ -382,16 +382,6 @@ class TopoGenerator(object):
 
 
             local_br = self.BR_orig_str_map[(l_br, l_ifid)]
-            # print("##############")
-            # print(l_br, r_br, l_ifid, r_ifid)
-            # local_br = topo_id.__str__() 
-            # split = local_br.split('-')
-            # # 1-ff00:0:120-A VS 1-ff00:0:110
-            # if len(split) == 2: 
-            #     # no specific ID is given, interface is important
-            #     local_br = '%s#%s' % (topo_id.__str__(), l_ifid )
-            print(f'BR to find: {local_br}')
-            print(f'In here {borderrouter_dict}')
             for internal_name, br_name in borderrouter_dict.items():
                 if local_br == br_name:
                     internal_br = internal_name
