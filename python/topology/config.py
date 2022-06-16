@@ -16,6 +16,7 @@
 :mod:`config` --- SCION topology config generator
 =============================================
 """
+import networkx as nx
 # Stdlib
 from collections import defaultdict
 import configparser
@@ -159,6 +160,8 @@ class ConfigGenerator(object):
             self.check_links(intra_topo_dict, asStr)
             # now check if SCION nodes only have 1 internal connection
             self.check_NR_connections(intra_topo_dict, asStr)
+            # check if network is connected 
+            self.check_network_connected(intra_topo_dict, asStr)
 
     def check_AS_internal_topology(self):       
         ASes = set()
@@ -296,6 +299,21 @@ class ConfigGenerator(object):
                 logging.critical("ERROR: AS %s: Node '%s' not allow to have 0 internal links", asStr, node)
                 sys.exit(1)
 
+
+    def check_network_connected(self, intra_topo_dict, asStr):
+        nodes = intra_topo_dict["Nodes"]
+        G = nx.Graph()
+        for node_type, node_list in nodes.items():
+            for node in node_list:
+                G.add_node(node)
+        topo_links = intra_topo_dict["links"]
+        for link in topo_links:
+            a = link['a']
+            b = link['b']
+            G.add_edge(a, b)
+        if not nx.is_connected(G):
+            logging.critical("ERROR: AS %s: Intra topology is not connected", asStr)
+            sys.exit(1)
 
     def _ensure_uniq_ases(self):
         seen = set()
