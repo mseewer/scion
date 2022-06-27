@@ -302,7 +302,7 @@ class ConfigGenerator(object):
 
     def check_network_connected(self, intra_topo_dict, asStr):
         nodes = intra_topo_dict["Nodes"]
-        G = nx.Graph()
+        G = nx.MultiGraph()
         for node_type, node_list in nodes.items():
             for node in node_list:
                 G.add_node(node)
