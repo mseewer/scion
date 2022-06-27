@@ -478,7 +478,16 @@ class TopoGenerator(object):
             intf = self._gen_br_intf(remote, public_addr, remote_addr, attrs, remote_type)
             self.topo_dicts[local]["border_routers"][local_br]['interfaces'][l_ifid] = intf
 
+    def _fill_dict(self, dict, attrs, attribute):
+        if attrs.get(attribute, None) is not None:
+            dict[attribute] = attrs[attribute]
+        return dict
+
     def _gen_br_intf(self, remote, public_addr, remote_addr, attrs, remote_type):
+        optional_attrs = {}
+        optional_attrs = self._fill_dict(optional_attrs, attrs, 'bw')
+        optional_attrs = self._fill_dict(optional_attrs, attrs, 'delay')
+    
         return {
             'underlay': {
                 'public': join_host_port(public_addr.ip, SCION_ROUTER_PORT),
@@ -486,7 +495,8 @@ class TopoGenerator(object):
             },
             'isd_as': str(remote),
             'link_to': LinkType.to_str(remote_type.lower()),
-            'mtu': attrs.get('mtu', self.args.default_mtu)
+            'mtu': attrs.get('mtu', self.args.default_mtu),
+            **optional_attrs
         }
 
     def _gen_sig_entries(self, topo_id, as_conf):
