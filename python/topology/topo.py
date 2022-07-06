@@ -478,15 +478,17 @@ class TopoGenerator(object):
             intf = self._gen_br_intf(remote, public_addr, remote_addr, attrs, remote_type)
             self.topo_dicts[local]["border_routers"][local_br]['interfaces'][l_ifid] = intf
 
-    def _fill_dict(self, dict, attrs, attribute):
+    def _fill_dict(self, opt_dict, attrs, attribute):
         if attrs.get(attribute, None) is not None:
-            dict[attribute] = attrs[attribute]
-        return dict
+            opt_dict[attribute] = attrs[attribute]
+        return opt_dict
 
     def _gen_br_intf(self, remote, public_addr, remote_addr, attrs, remote_type):
         optional_attrs = {}
         optional_attrs = self._fill_dict(optional_attrs, attrs, 'bw')
         optional_attrs = self._fill_dict(optional_attrs, attrs, 'delay')
+        optional_attrs = self._fill_dict(optional_attrs, attrs, 'loss')
+        optional_attrs = self._fill_dict(optional_attrs, attrs, 'jitter')
     
         return {
             'underlay': {
