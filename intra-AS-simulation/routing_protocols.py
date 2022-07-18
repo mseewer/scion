@@ -63,8 +63,8 @@ class OSPF(object):
             zebra_config = self.Zebra.create_config(node)
             ospf_config = self.create_config(node)
 
-            node.cmd(f'cd {self.SCION_PATH} ; zebra -u root -d -f {zebra_config} -z {socket} -i {pid_zebra} --log-level debug --log file:logs/{self.FULL_NAME}/zebra_{name}.log 2>&1 &')
-            node.cmd(f'cd {self.SCION_PATH} ; ospfd -u root -d -f {ospf_config} -z {socket} -i {pid_ospf} --log-level debug --log file:logs/{self.FULL_NAME}/ospf_{name}.log 2>&1 &')
+            node.cmd(f'cd {self.SCION_PATH} ; /usr/lib/frr/zebra -u root -d -f {zebra_config} -z {socket} -i {pid_zebra} --log-level debug --log file:logs/{self.FULL_NAME}/zebra_{name}.log 2>&1 &')
+            node.cmd(f'cd {self.SCION_PATH} ; /usr/lib/frr/ospfd -u root -d -f {ospf_config} -z {socket} -i {pid_ospf} --log-level debug --log file:logs/{self.FULL_NAME}/ospf_{name}.log 2>&1 &')
 
     def stop(self):
         """Stops OSPF daemon on each node + Zebra daemon"""
