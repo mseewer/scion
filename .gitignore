@@ -93,3 +93,7 @@ _build
 # node modules
 ##############
 node_modules
+
+# dependency files (intra-AS)
+#########################
+/dependencies/
