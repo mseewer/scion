@@ -8,7 +8,7 @@
     ```bash
     ./install_deps.sh
     ```
-
+    - this will install routing protocols and other dependencies needed to run the intra-AS simulation
 # Usage
 - Whole usage can be done with the helper script `scion-intra.sh` in the root directory of this repo.
 
@@ -30,6 +30,8 @@
     - only intra AS simulation:
     ```bash
     ./scion-intra.sh clean_intra
+    # OR
+    ./scion-intra.sh clean
     ```
     - or all:
     ```bash
