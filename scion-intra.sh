@@ -2,9 +2,8 @@
 export PYTHONPATH=.
 
 cmd_build() {
-    sudo rm -rf gen/* gen-cache/* gen-certs/*
-    ./scion.sh topo_clean
-    ./scion.sh bazel_remote
+    # exit when any command fails
+    set -e
 
     if [ -z "$1" ]
     then
@@ -31,6 +30,9 @@ cmd_build() {
         cmd_help
         exit 1
     fi
+
+    sudo rm -rf gen/* gen-cache/* gen-certs/*
+    ./scion.sh bazel_remote
 
     intraConfig=$1
     shift
@@ -100,5 +102,6 @@ case "$COMMAND" in
     help|build|run|clean_intra|clean_all)
         "cmd_$COMMAND" "$@" ;;
     start) cmd_run "$@" ;;
+    clean) cmd_clean_intra ;;
     *)  cmd_help; exit 1 ;;
 esac
