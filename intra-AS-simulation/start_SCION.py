@@ -118,7 +118,19 @@ class SCIONTopology(object):
         for link in topo_links:
             a = link['a']
             b = link['b']
-            G.add_edge(a, b)
+            label = ""
+            if link.get('bw', None) is not None:
+                label += f'BW: {link["bw"]} Mbit/s\n'
+            if link.get('delay', None) is not None:
+                label += f'Delay: {link["delay"]} ms\n'
+            if link.get('loss', None) is not None:
+                label += f'Loss: {link["loss"]}%\n'
+            if link.get('jitter', None) is not None:
+                label += f'Jitter: {link["jitter"]} ms\n'
+            label = label.strip()
+            G.add_edge(a, b, 
+                label=label
+            )
         if not nx.is_connected(G):
             error("ERROR: AS %s: Intra topology is not connected", ISD_AS_id)
             sys.exit(1)
@@ -309,7 +321,7 @@ class SCIONTopology(object):
                 for i, network in enumerate(network_list):
                     print(f'[{i+1}] {network}')
                 try:
-                    network_index = int(input('network index: ').strip())
+                    network_index = int(input('Network index: ').strip())
                 except Exception as e:
                     print('Invalid network index')
                     continue
