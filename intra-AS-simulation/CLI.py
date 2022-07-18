@@ -42,12 +42,14 @@ def AS_CLI(networks, ASes, AS):
             elif option == '4':
                 info('### Drawing intra AS topology ###\n')
                 try:
+                    plt.figure(num=f'Intra-AS topology of AS: {AS.ISD_AS_id}') # set figure title
                     try: 
                         nx.draw_planar(AS.graph, node_color='#8691fc', with_labels=True)
                     except NetworkXException:
                         # Graph is not planar
                         nx.draw(AS.graph, node_color='#8691fc', with_labels=True)
-                    plt.show() 
+                    # TODO: add edge labels (problem with multigraph, how to label multiple edges between 2 nodes?)
+                    plt.show()
                 except Exception as e:
                     output(f'Drawing failed: {e}\n')
             else:
