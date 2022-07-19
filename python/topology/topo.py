@@ -132,9 +132,9 @@ class TopoGenerator(object):
         self._read_links()
         # in a first step we allocate all networks, so that we can later use
         # the IPs in the generate functions.
-        if self.args.intra_config is not None: 
+        if self.args.intra_config is not None:
             self._iterate(self._register_intra_addrs)
-        else: 
+        else:
             self._iterate(self._register_addrs)
         networks = {}
         for k, v in self.args.subnet_gen[ADDR_TYPE_4].alloc_subnets().items():
@@ -170,7 +170,7 @@ class TopoGenerator(object):
 
         seen = defaultdict(int)
 
-        for i, link in enumerate(intra_links):
+        for link in intra_links:
             a = link['a']
             nick_a = self.get_nick_intra(a, intra_nodes_dict)
             b = link['b']
@@ -180,17 +180,15 @@ class TopoGenerator(object):
             a_id = "%s%s-%s-@%s" % (nick_a, topo_id.file_fmt(), seen[a], a)
             b_id = "%s%s-%s-@%s" % (nick_b, topo_id.file_fmt(), seen[b], b)
 
-
-
             self._reg_link_addrs(a_id, b_id, seen[a], seen[b], addr_type)
             if not self.args.docker:
                 self.args.port_gen.register(a_id)
                 self.args.port_gen.register(b_id)
 
+        # register the border routers
         for (linkto, remote, attrs, l_br, r_br, l_ifid, r_ifid) in self.links[topo_id]:
             link_addr_type = addr_type_from_underlay(attrs.get('underlay', DEFAULT_UNDERLAY))
             self._reg_link_addrs(l_br, r_br, l_ifid, r_ifid, link_addr_type)
-
 
     def _register_addrs(self, topo_id, as_conf):
         self._register_srv_entries(topo_id, as_conf)
@@ -264,12 +262,12 @@ class TopoGenerator(object):
     def _get_orig_str(self, x):
         x_no_itf = x.split('#')[0]
         x_split = x_no_itf.split('-')
-        if len(x_split) == 3: 
+        if len(x_split) == 3:
             # specific ID is given
             # don't save interface, because this BR will have multiple interfaces
             return x_no_itf
         # no specific ID is given, all interfaces important
-        return x     
+        return x
 
     def _read_links(self):
         assigned_br_id = {}
@@ -302,8 +300,8 @@ class TopoGenerator(object):
             self.BR_names[str(a)][initial_a] = a_br
             self.BR_names.setdefault(str(b), {})
             self.BR_names[str(b)][initial_b] = b_br
-            self.BR_orig_str_map[(a_br,a_ifid)] = orig_a
-            self.BR_orig_str_map[(b_br,b_ifid)] = orig_b
+            self.BR_orig_str_map[(a_br, a_ifid)] = orig_a
+            self.BR_orig_str_map[(b_br, b_ifid)] = orig_b
 
     def _generate_as_topo(self, topo_id, as_conf):
         mtu = as_conf.get('mtu', self.args.default_mtu)
@@ -322,7 +320,7 @@ class TopoGenerator(object):
 
         if self.args.intra_config is not None:
             self._gen_intra_entries(topo_id, as_conf)
-        else: 
+        else:
             self._gen_srv_entries(topo_id, as_conf)
             self._gen_br_entries(topo_id, as_conf)
             if self.args.sig:
@@ -338,6 +336,69 @@ class TopoGenerator(object):
         }
         self.topo_dicts[topo_id][topo_key][elem_id] = d
 
+    def _gen_intra_entry(self, link, intra_nodes_dict, seen, borderrouters, addr_type, topo_id):
+        a = link['a']
+        nick_a = self.get_nick_intra(a, intra_nodes_dict)
+        b = link['b']
+        nick_b = self.get_nick_intra(b, intra_nodes_dict)
+        seen[a] += 1
+        seen[b] += 1
+        a_id = "%s%s-%s-@%s" % (nick_a, topo_id.file_fmt(), seen[a], a)
+        b_id = "%s%s-%s-@%s" % (nick_b, topo_id.file_fmt(), seen[b], b)
+
+        ip = self._reg_link_addrs(a_id, b_id, seen[a], seen[b], addr_type)[0].ip
+
+        for node, ID in [(a, a_id), (b, b_id)]:
+            if node in intra_nodes_dict['Colibri']:
+                port = self._default_ctrl_port('co')
+                self._gen_intra_srvs(port, ID, topo_id, "colibri_service", ip)
+
+            if node in intra_nodes_dict['Control-Service']:
+                port = self._default_ctrl_port('cs')
+                self._gen_intra_srvs(port, ID, topo_id, "control_service", ip)
+                self._gen_intra_srvs(port, ID, topo_id, "discovery_service", ip)
+
+        if link['a'] in intra_nodes_dict['Borderrouter']:
+            borderrouters[link['a']] = {'a_id': a_id,
+                                        'b_id': b_id, 'seen_a': seen[a], 'seen_b': seen[b]}
+        if link['b'] in intra_nodes_dict['Borderrouter']:
+            borderrouters[link['b']] = {'a_id': b_id,
+                                        'b_id': a_id, 'seen_a': seen[b], 'seen_b': seen[a]}
+
+    def _gen_intra_br_entry(self, remote_type, remote, attrs, l_br, r_br, l_ifid, r_ifid,
+                            borderrouter_dict, borderrouters, addr_type, topo_id):
+        link_addr_type = addr_type_from_underlay(attrs.get('underlay', DEFAULT_UNDERLAY))
+        public_addr, remote_addr = self._reg_link_addrs(l_br, r_br, l_ifid,
+                                                        r_ifid, link_addr_type)
+
+        local_br = self.BR_orig_str_map[(l_br, l_ifid)]
+        for internal_name, br_name in borderrouter_dict.items():
+            if local_br == br_name:
+                internal_br = internal_name
+                break
+
+        a_id = borderrouters[internal_br]['a_id']
+        b_id = borderrouters[internal_br]['b_id']
+        seen_a = borderrouters[internal_br]['seen_a']
+        seen_b = borderrouters[internal_br]['seen_b']
+
+        intl_addr = self._reg_link_addrs(a_id, b_id, seen_a, seen_b, addr_type)[0]
+        if self.topo_dicts[topo_id]["border_routers"].get(l_br) is None:
+            intl_port = 30042
+            if not self.args.docker:
+                intl_port = self.args.port_gen.register(a_id)
+
+            self.topo_dicts[topo_id]["border_routers"][l_br] = {
+                'internal_addr': join_host_port(intl_addr.ip, intl_port),
+                'interfaces': {
+                    l_ifid: self._gen_br_intf(remote, public_addr, remote_addr, attrs, remote_type)
+                }
+            }
+        else:
+            # There is already a BR entry, add interface
+            intf = self._gen_br_intf(remote, public_addr, remote_addr, attrs, remote_type)
+            self.topo_dicts[topo_id]["border_routers"][l_br]['interfaces'][l_ifid] = intf
+
     def _gen_intra_entries(self, topo_id, as_conf):
         intra_topo_file = self.args.intra_topo_dicts[topo_id.__str__()]
         borderrouter_dict = self.args.intra_config_dict['ASes'][topo_id.__str__()]['Borderrouter']
@@ -348,69 +409,12 @@ class TopoGenerator(object):
         seen = defaultdict(int)
         borderrouters = {}
 
-        for i, link in enumerate(intra_links):
-            a = link['a']
-            nick_a = self.get_nick_intra(a, intra_nodes_dict)
-            b = link['b']
-            nick_b = self.get_nick_intra(b, intra_nodes_dict)
-            seen[a] += 1
-            seen[b] += 1
-            a_id = "%s%s-%s-@%s" % (nick_a, topo_id.file_fmt(), seen[a], a)
-            b_id = "%s%s-%s-@%s" % (nick_b, topo_id.file_fmt(), seen[b], b)
+        for link in intra_links:
+            self._gen_intra_entry(link, intra_nodes_dict, seen, borderrouters, addr_type, topo_id)
 
-            ip = self._reg_link_addrs(a_id, b_id, seen[a], seen[b], addr_type)[0].ip
-
-            for node, ID in [(a, a_id), (b, b_id)]:
-                if node in intra_nodes_dict['Colibri']:
-                    port = self._default_ctrl_port('co')
-                    self._gen_intra_srvs(port, ID, topo_id, "colibri_service", ip)
-
-                if node in intra_nodes_dict['Control-Service']:
-                    port = self._default_ctrl_port('cs')
-                    self._gen_intra_srvs(port, ID, topo_id, "control_service", ip)
-                    self._gen_intra_srvs(port, ID, topo_id, "discovery_service", ip)
-
-            if link['a'] in intra_nodes_dict['Borderrouter']:
-                borderrouters[link['a']] = {'a_id': a_id, 'b_id': b_id, 'seen_a' : seen[a], 'seen_b' : seen[b]}
-            if link['b'] in intra_nodes_dict['Borderrouter']:
-                borderrouters[link['b']] = {'a_id': b_id, 'b_id': a_id, 'seen_a' : seen[b], 'seen_b' : seen[a]}
-    
         for (remote_type, remote, attrs, l_br, r_br, l_ifid, r_ifid) in self.links[topo_id]:
-            link_addr_type = addr_type_from_underlay(attrs.get('underlay', DEFAULT_UNDERLAY))
-            public_addr, remote_addr = self._reg_link_addrs(l_br, r_br, l_ifid,
-                                                            r_ifid, link_addr_type)
-
-
-            local_br = self.BR_orig_str_map[(l_br, l_ifid)]
-            for internal_name, br_name in borderrouter_dict.items():
-                if local_br == br_name:
-                    internal_br = internal_name
-                    break
-
-            a_id = borderrouters[internal_br]['a_id']
-            b_id = borderrouters[internal_br]['b_id']
-            seen_a = borderrouters[internal_br]['seen_a']
-            seen_b = borderrouters[internal_br]['seen_b']
-
-
-            intl_addr = self._reg_link_addrs(a_id, b_id, seen_a, seen_b, addr_type)[0]
-            if self.topo_dicts[topo_id]["border_routers"].get(l_br) is None:
-                intl_port = 30042
-                if not self.args.docker:
-                    intl_port = self.args.port_gen.register(a_id)
-
-                self.topo_dicts[topo_id]["border_routers"][l_br] = {
-                    'internal_addr': join_host_port(intl_addr.ip, intl_port),
-                    'interfaces': {
-                        l_ifid: self._gen_br_intf(remote, public_addr, remote_addr, attrs, remote_type)
-                    }
-                }
-            else:
-                # There is already a BR entry, add interface
-                intf = self._gen_br_intf(remote, public_addr, remote_addr, attrs, remote_type)
-                self.topo_dicts[topo_id]["border_routers"][l_br]['interfaces'][l_ifid] = intf
-
-
+            self._gen_intra_br_entry(remote_type, remote, attrs, l_br, r_br, l_ifid, r_ifid,
+                                     borderrouter_dict, borderrouters, addr_type, topo_id)
 
     def _gen_srv_entries(self, topo_id, as_conf):
         srvs = [("control_servers", DEFAULT_CONTROL_SERVERS, "cs", "control_service")]
@@ -489,7 +493,7 @@ class TopoGenerator(object):
         optional_attrs = self._fill_dict(optional_attrs, attrs, 'delay')
         optional_attrs = self._fill_dict(optional_attrs, attrs, 'loss')
         optional_attrs = self._fill_dict(optional_attrs, attrs, 'jitter')
-    
+
         return {
             'underlay': {
                 'public': join_host_port(public_addr.ip, SCION_ROUTER_PORT),
@@ -540,6 +544,7 @@ class TopoGenerator(object):
         list_path = os.path.join(self.args.output_dir, BR_NAMES_FILE)
         write_file(list_path, yaml.dump(self.BR_names,
                                         default_flow_style=False))
+
 
 class LinkEP(TopoID):
     def __init__(self, raw):

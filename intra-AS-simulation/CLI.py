@@ -2,9 +2,8 @@
 
 import networkx as nx
 from networkx import NetworkXException
-from mininet.cli import CLI
 import matplotlib.pyplot as plt
-from mininet.log import lg, info, output, warning, error, debug
+from mininet.log import info, output
 from mininet.cli import CLI
 
 from test_SCION_in_mininet import test_SCION_ping, test_SCION_bwtest_client_server
@@ -27,7 +26,7 @@ def AS_CLI(networks, ASes, AS):
                 info('### Testing SCION ###\n')
                 try:
                     test_SCION_ping(ASes, AS)
-                except Exception as e: 
+                except Exception as e:
                     output(f'Test failed: {e}\n')
             elif option == '2':
                 info('### Starting SCION bwtest ###\n')
@@ -42,19 +41,21 @@ def AS_CLI(networks, ASes, AS):
             elif option == '4':
                 info('### Drawing intra AS topology ###\n')
                 try:
-                    plt.figure(num=f'Intra-AS topology of AS: {AS.ISD_AS_id}') # set figure title
-                    try: 
+                    # set figure title
+                    plt.figure(num=f'Intra-AS topology of AS: {AS.ISD_AS_id}')
+                    try:
                         nx.draw_planar(AS.graph, node_color='#8691fc', with_labels=True)
                     except NetworkXException:
                         # Graph is not planar
                         nx.draw(AS.graph, node_color='#8691fc', with_labels=True)
-                    # TODO: add edge labels (problem with multigraph, how to label multiple edges between 2 nodes?)
+                    # TODO: add edge labels
+                    # problem with multigraph, how to label multiple edges between 2 nodes?
                     plt.show()
                 except Exception as e:
                     output(f'Drawing failed: {e}\n')
             else:
                 output('Invalid option\n')
-        except:
+        except (Exception, KeyboardInterrupt):
             continue
 
 

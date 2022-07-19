@@ -25,12 +25,12 @@ def clean_up_scion():
             print('Aborting')
             return
 
-        commands = ['bin/posix-router --config ', 
+        commands = ['bin/posix-router --config ',
                     'bin/co --config ',
                     'bin/cs --config ',
                     'bin/daemon --config ',
                     'bin/dispatcher --config ',
-        ]
+                    ]
         for command in commands:
             os.system(f'sudo pkill -f "{command}"')
     else:
@@ -40,7 +40,6 @@ def clean_up_scion():
         for section in supervisor_config.sections():
             scion_command = supervisor_config[section].get('command', None)
             os.system(f'pkill -f "{scion_command}"')
-
 
 
 def clean_up():

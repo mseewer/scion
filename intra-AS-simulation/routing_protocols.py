@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 class Zebra(object):
     """Class for Zebra daemon"""
 
@@ -11,7 +12,7 @@ class Zebra(object):
 
     def create_config(self, node):
         """Create zebra config file for this node.
-        
+
         Defines on which interface the zebra daemon should listen.
         """
         name = node.name
@@ -49,11 +50,9 @@ class OSPF(object):
         self.config_path = Path(self.SCION_PATH, f'gen/ospf/{self.FULL_NAME}')
         self.config_path.mkdir(parents=True, exist_ok=True)
 
-
     def start(self):
         """Start OSPF daemon on each node"""
         Path(self.SCION_PATH, f'logs/{self.FULL_NAME}/').mkdir(parents=True, exist_ok=True)
-
 
         for node in self.nodes:
             name = node.name
@@ -63,8 +62,12 @@ class OSPF(object):
             zebra_config = self.Zebra.create_config(node)
             ospf_config = self.create_config(node)
 
-            node.cmd(f'cd {self.SCION_PATH} ; /usr/lib/frr/zebra -u root -d -f {zebra_config} -z {socket} -i {pid_zebra} --log-level debug --log file:logs/{self.FULL_NAME}/zebra_{name}.log 2>&1 &')
-            node.cmd(f'cd {self.SCION_PATH} ; /usr/lib/frr/ospfd -u root -d -f {ospf_config} -z {socket} -i {pid_ospf} --log-level debug --log file:logs/{self.FULL_NAME}/ospf_{name}.log 2>&1 &')
+            node.cmd(f'cd {self.SCION_PATH} ; \
+                    /usr/lib/frr/zebra -u root -d -f {zebra_config} -z {socket} -i {pid_zebra} \
+                    --log-level debug --log file:logs/{self.FULL_NAME}/zebra_{name}.log 2>&1 &')
+            node.cmd(f'cd {self.SCION_PATH} ; \
+                    /usr/lib/frr/ospfd -u root -d -f {ospf_config} -z {socket} -i {pid_ospf} \
+                     --log-level debug --log file:logs/{self.FULL_NAME}/ospf_{name}.log 2>&1 &')
 
     def stop(self):
         """Stops OSPF daemon on each node + Zebra daemon"""
@@ -86,7 +89,6 @@ class OSPF(object):
         node.cmd(f'rm -rf {self.config_path}')
         node.cmd(f'rm -rf {self.temp_path}')
         node.cmd('rm -rf /var/tmp/frr/')
-
 
     def create_config(self, node):
         """Create OSPF config file for this node.
@@ -110,14 +112,12 @@ password scion
     ip ospf cost {cost}
 !
 """
-    
 
         config += f"""router ospf
     ospf router-id {node.defaultIntf().IP()}
     redistribute connected
     passive-interface default
     """
-
 
         for intf in node.intfList():
             config += f"""no passive-interface {intf.name}
@@ -148,7 +148,7 @@ password scion
             raw_delay = delay.split('s')[0]
             if raw_delay[-1] == 'm':
                 real_delay = raw_delay[:-1]
-            else: 
+            else:
                 real_delay = raw_delay * 1000
 
             cost += int(real_delay)
@@ -160,10 +160,10 @@ password scion
             if raw_jitter[-1] == 'm':
                 # jitter in ms
                 real_jitter = raw_jitter[:-1]
-            else: 
+            else:
                 # jitter in s
                 real_jitter = raw_jitter * 1000
 
             cost += int(real_jitter)
-        
+
         return min(cost, max_cost)

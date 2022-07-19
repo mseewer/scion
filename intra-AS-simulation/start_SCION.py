@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import argparse
 import os
 import json
@@ -12,9 +11,8 @@ from AutonomousSystem import AutonomousSystem
 from pathlib import Path
 from collections import defaultdict
 from CLI import AS_CLI
-from mininet.log import lg, info, output, warning, error, debug
+from mininet.log import info, output, error
 
-sys.path.insert(0, '.')
 from python.lib.util import (
     load_yaml_file,
 )
@@ -128,9 +126,9 @@ class SCIONTopology(object):
             if link.get('jitter', None) is not None:
                 label += f'Jitter: {link["jitter"]} ms\n'
             label = label.strip()
-            G.add_edge(a, b, 
-                label=label
-            )
+            G.add_edge(a, b,
+                       label=label
+                       )
         if not nx.is_connected(G):
             error("ERROR: AS %s: Intra topology is not connected", ISD_AS_id)
             sys.exit(1)
@@ -138,7 +136,7 @@ class SCIONTopology(object):
 
     def initialize_BR_names(self):
         """Maps border router name from config to names used in the Mininet topology
-        
+
         Example: maps: br1-ff00_0_111-3  -> br3 (name in intra config file)
         Stores the map from: BR name -> (ISD, internal name)
         and also the reverse map: (ISD, internal name) -> BR name
@@ -160,7 +158,7 @@ class SCIONTopology(object):
 
     def create_networks(self):
         """Create Mininet networks for each AS
-        
+
         Store Mininet network reference + other useful attributes in self.networks
         """
         for ISD_AS_id, AS_config in self.ASes.items():
@@ -184,7 +182,7 @@ class SCIONTopology(object):
     def add_inter_AS_links(self, ISD_AS_id, BR_dict, links_created):
         """Add links between ASes
 
-        Add also link properties defined in the SCION topology file 
+        Add also link properties defined in the SCION topology file
         and now stored in the topology dict (from topology.json)
         """
         BR_SUBNETS = self.networks[ISD_AS_id]['AS'].BR_SUBNETS
@@ -218,7 +216,7 @@ class SCIONTopology(object):
                 raise Exception(
                     f'ERROR: BR not found in network: {in_net_BR1_name} or {in_net_BR2_name}')
 
-            # extract correct IP address 
+            # extract correct IP address
             addr1, addr2 = None, None
             for subnet in BR_SUBNETS:
                 netprefix = subnet.split('/')[1]
@@ -260,7 +258,7 @@ class SCIONTopology(object):
     def add_link_attributes(self, ISD_AS_id, BR1_name, BR2_name, BR1_ifid,
                             in_net_BR1, in_net_BR2, intf1, intf2):
         """Add link properties defined in the SCION topology file
-        
+
         Adapted from Mininets traffic control implementation: mininet/link.py TCIntf
         """
         mtu = self.get_link_attribute(
@@ -322,7 +320,7 @@ class SCIONTopology(object):
                     print(f'[{i+1}] {network}')
                 try:
                     network_index = int(input('Network index: ').strip())
-                except Exception as e:
+                except Exception:
                     print('Invalid network index')
                     continue
                 if network_index == 0:
@@ -337,13 +335,13 @@ class SCIONTopology(object):
                        ASes=self.ASes,
                        AS=AS
                        )
-            except:
+            except (Exception, KeyboardInterrupt):
                 pass
 
     def start(self):
         """After everything is set up, start all ASes"""
         # create individual ASes
-        output(f'------   Creating ASes...   ------\n')
+        output('------   Creating ASes...   ------\n')
         self.create_networks()
         # create intra-AS links
         output('------   Connect ASes with inter-AS links...   ------\n')
@@ -373,7 +371,7 @@ class SCIONTopology(object):
 
 def check_scion_apps(apps_argument):
     """Check if the scion apps are cloned and available"""
-    
+
     if apps_argument is None:
         print('SCION_APPS_PATH is not set')
         print('Either set it as environment variable or pass it as an argument')
@@ -399,11 +397,10 @@ def check_scion_apps(apps_argument):
             print('Exiting...')
             sys.exit(1)
 
-
     return apps_path
 
-def parse_arguments():
 
+def parse_arguments():
     parser = argparse.ArgumentParser(description='Starts all SCION topologies')
     parser.add_argument('-i', '--intra_config', required=True,
                         help='Path to intra.config file')
@@ -419,8 +416,8 @@ def parse_arguments():
 
     apps_path = check_scion_apps(args.apps)
 
-
     return intra_path.absolute(), apps_path.absolute()
+
 
 def main():
     intra_config_path, scion_apps_path = parse_arguments()
