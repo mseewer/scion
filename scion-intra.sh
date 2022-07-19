@@ -61,7 +61,7 @@ cmd_run(){
     intraConfig=$1
     shift
 
-    sudo -E intra-AS-simulation/start_SCION.py -i $intraConfig "$@"
+    sudo -E PYTHONPATH=$PYTHONPATH intra-AS-simulation/start_SCION.py -i $intraConfig "$@"
 
 }
 
