@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 MY_VERSION="-mseewer1.0"
-startdir=$(pwd)
+
+# install intra-AS dependencies
+sudo apt install -y python3-pip
+sudo pip3 install -r requirements.txt
+
+
+cd ~
+installdir=$(pwd)
 
 # install OSPF/Zebra and other routing protocols
 # adapted from: http://docs.frrouting.org/projects/dev-guide/en/latest/building-frr-for-ubuntu1804.html
@@ -12,13 +19,10 @@ sudo apt-get install -y \
    pkg-config libpam0g-dev libjson-c-dev bison flex \
    libc-ares-dev python3-dev python3-sphinx \
    install-info build-essential libsnmp-dev perl libcap-dev \
-   libelf-dev libunwind-dev 
-
-mkdir dependencies
+   libelf-dev libunwind-dev
 
 # install FRR dependency -> libyang
 sudo apt install -y libpcre2-dev cmake
-cd dependencies
 git clone https://github.com/CESNET/libyang.git
 cd libyang
 git checkout v2.0.0
@@ -27,7 +31,7 @@ cmake -D CMAKE_INSTALL_PREFIX:PATH=/usr \
       -D CMAKE_BUILD_TYPE:String="Release" ..
 make
 sudo make install
-cd $startdir
+cd $installdir
 echo "libyang dependency installed"
 
 
@@ -41,7 +45,6 @@ sudo usermod -a -G frrvty root
 
 
 # compile FRR
-cd dependencies
 git clone https://github.com/frrouting/frr.git frr
 cd frr
 git checkout $FRRVERSION
@@ -65,15 +68,13 @@ git checkout $FRRVERSION
     --enable-group=frr \
     --enable-vty-group=frrvty \
     --with-pkg-git-version \
-    --with-pkg-extra-version=$MY_VERSION 
+    --with-pkg-extra-version=$MY_VERSION
 make
 sudo make install
 
-cd $startdir
+cd $installdir
 echo "frr installed"
 
 
 
-# install intra-AS dependencies
-sudo apt install -y python3-pip
-sudo pip3 install -r requirements.txt
+
