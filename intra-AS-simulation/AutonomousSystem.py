@@ -99,16 +99,18 @@ class Intra_AS_Topo(Topo):
 
             a_addr, b_addr = self.get_addresses(node_a_name, node_b_name, SUBNETS, networks_config)
 
-            # bw        bandwidth in Mbit/s (e.g. 10)
-            # delay 	transmit delay (e.g. '1ms' )
-            # jitter	jitter (e.g. '1ms')
-            # loss	    loss (e.g. 2 )
             bw = link.get('bw', None)
-            if bw is not None:
-                bw = int(bw)
             delay = link.get('delay', None)
             jitter = link.get('jitter', None)
             loss = link.get('loss', None)
+            if bw is not None:
+                bw = int(bw)
+            if delay is not None:
+                delay = f'{delay}ms'
+            if jitter is not None:
+                jitter = f'{jitter}ms'
+            if loss is not None:
+                loss = float(loss)
 
             self.addLink(node_a, node_b,
                          bw=bw, delay=delay, jitter=jitter, loss=loss,

@@ -252,8 +252,8 @@ class SCIONTopology(object):
             error(f'Bad loss percentage {loss}\n')
 
         netemargs = '%s%s%s' % (
-            f'delay {delay} ' if delay is not None else '',
-            f'{jitter} ' if jitter is not None else '',
+            f'delay {delay}ms ' if delay is not None else '',
+            f'{jitter}ms ' if jitter is not None else '',
             f'loss {loss:.5f} ' if (loss is not None and loss > 0) else '')
         if netemargs:
             cmds += ['tc qdisc add dev %s ' +
