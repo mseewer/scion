@@ -30,13 +30,13 @@
 
     ```bash
     export SCION_APPS_PATH=ath-to-SCION-apps-directory
-    ./scion-intra.sh run path-to-intra-AS-config-file
+    ./scion-intra.sh run
     ```
 
     - It is also possible to enter the SCION-apps directory directly:
 
     ```bash
-    ./scion-intra.sh run path-to-intra-AS-config-file --apps path-to-SCION-apps-directory
+    ./scion-intra.sh run --apps path-to-SCION-apps-directory
     ```
 
 - Cleanup:
