@@ -22,18 +22,18 @@ from python.lib.defines import (
     IFIDS_FILE,
     AS_LIST_FILE,
     BR_NAMES_FILE,
+    INTRA_CONFIG_FILE,
 )
 
 
 class SCIONTopology(object):
     """Creates multiple ASes and connects them to each other"""
 
-    def __init__(self, intra_config, scion_apps_path):
+    def __init__(self, scion_apps_path, gen_path):
         """Initialize the topology"""
         self.SCION_PATH = Path().absolute()
         self.SCION_APPS_PATH = scion_apps_path
-        self.intra_config = intra_config
-        self.gen_dir = Path(self.SCION_PATH, GEN_PATH)
+        self.gen_dir = Path(gen_path)
         # using getlogin() returning username
         self.username = os.getlogin()
         if self.username == 'root':
@@ -44,6 +44,7 @@ class SCIONTopology(object):
         self.AS_list_file = Path(self.gen_dir, AS_LIST_FILE)
         self.interface_IDS_file = Path(self.gen_dir, IFIDS_FILE)
         self.BR_names_file = Path(self.gen_dir, BR_NAMES_FILE)
+        self.intra_config = Path(self.gen_dir, INTRA_CONFIG_FILE)
 
         self.AS_yaml_dict = load_yaml_file(self.AS_list_file)
         self.intra_config_dict = load_yaml_file(self.intra_config)
@@ -402,26 +403,22 @@ def check_scion_apps(apps_argument):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Starts all SCION topologies')
-    parser.add_argument('-i', '--intra_config', required=True,
-                        help='Path to intra.config file')
+    parser.add_argument('-g', '--gen-path', default=GEN_PATH,
+                        help='Path where you generated the output files in \
+                         the build process')
     parser.add_argument('-a', '--apps', default=os.getenv('SCION_APPS_PATH'),
                         help='Path to SCION apps directory')
 
     args = parser.parse_args()
-    intra_path = Path(args.intra_config)
-    if not intra_path.exists():
-        print(f'{args.intra_config} does not exist')
-        print('Exiting...')
-        sys.exit(1)
 
     apps_path = check_scion_apps(args.apps)
 
-    return intra_path.absolute(), apps_path.absolute()
+    return apps_path.absolute(), args.gen_path
 
 
 def main():
-    intra_config_path, scion_apps_path = parse_arguments()
-    SCIONTopology(intra_config_path, scion_apps_path).start()
+    scion_apps_path, gen_path = parse_arguments()
+    SCIONTopology(scion_apps_path, gen_path).start()
 
 
 if __name__ == '__main__':

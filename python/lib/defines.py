@@ -31,6 +31,8 @@ AS_LIST_FILE = "as_list.yml"
 PROM_FILE = "prometheus.yml"
 #: BR name mapping
 BR_NAMES_FILE = "br_names.yml"
+#: Intra config
+INTRA_CONFIG_FILE = 'intra-configuration.yml'
 
 #: Default SCION router UDP port.
 SCION_ROUTER_PORT = 50000

@@ -46,23 +46,7 @@ cmd_build() {
 
 cmd_run(){
     set -e
-    if [ -z "$1" ]
-    then
-        echo "No path to intra-AS configuration supplied!"
-        cmd_help
-        exit 1
-    fi
-    if [ ! -f "$1" ]
-    then
-        echo "Path to intra-AS configuration does not exist!"
-        cmd_help
-        exit 1
-    fi
-    intraConfig=$1
-    shift
-
-    sudo -E PYTHONPATH=$PYTHONPATH intra-AS-simulation/start_SCION.py -i $intraConfig "$@"
-
+    sudo -E PYTHONPATH=$PYTHONPATH intra-AS-simulation/start_SCION.py "$@"
 }
 
 cmd_clean_intra(){

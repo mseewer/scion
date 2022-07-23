@@ -23,8 +23,10 @@ import configparser
 import json
 import logging
 import os
-import pathlib
 import sys
+import yaml
+import shutil
+from pathlib import Path
 from io import StringIO
 from typing import Mapping
 
@@ -33,6 +35,7 @@ from python.lib.defines import (
     DEFAULT_MTU,
     DEFAULT6_NETWORK,
     NETWORKS_FILE,
+    INTRA_CONFIG_FILE,
 )
 from python.lib.scion_addr import ISD_AS
 from python.lib.util import (
@@ -116,6 +119,8 @@ class ConfigGenerator(object):
         self._generate_with_topo(topo_dicts)
         self._write_networks_conf(self.networks, NETWORKS_FILE)
         self._write_sciond_conf(self.networks, SCIOND_ADDRESSES_FILE)
+        if self.use_intra:
+            self._write_intra_files()
 
     def remove_unused_BR(self, intra_topo_dict, asStr):
 
@@ -137,12 +142,12 @@ class ConfigGenerator(object):
         self.check_AS_internal_topology()
 
         for asStr, config in self.intra_config["ASes"].items():
-            intra_topo_file = pathlib.Path(config["Intra-Topology"])
+            intra_topo_file = Path(config["Intra-Topology"])
             borderrouters = config["Borderrouter"]
             self.check_all_BR_defined(asStr, borderrouters)
             if not intra_topo_file.is_absolute():
-                intra_config_folder = pathlib.Path(self.intra_config_file).parent
-                intra_topo_file = pathlib.Path(intra_config_folder, intra_topo_file)
+                intra_config_folder = Path(self.intra_config_file).parent
+                intra_topo_file = Path(intra_config_folder, intra_topo_file)
 
             if not intra_topo_file.is_file():
                 logging.critical(
@@ -438,6 +443,27 @@ class ConfigGenerator(object):
                     d[ia] = str(ip_net.ip)
         with open(os.path.join(self.args.output_dir, out_file), mode="w") as f:
             json.dump(d, f, sort_keys=True, indent=4)
+
+    def _write_intra_files(self):
+        new_intra_config = self.intra_config
+        for asStr, config in self.intra_config["ASes"].items():
+            intra_topo_file = Path(config["Intra-Topology"])
+            if not intra_topo_file.is_absolute():
+                intra_config_folder = Path(self.intra_config_file).parent
+                intra_topo_file = Path(intra_config_folder, intra_topo_file)
+
+            new_intra_file_path = Path("intra-topologies/",
+                                       ISD_AS(asStr).file_fmt() + ".intra.topo")
+
+            output_file = Path(self.args.output_dir, new_intra_file_path)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(intra_topo_file, output_file)
+
+            new_intra_config["ASes"][asStr]["Intra-Topology"] = str(new_intra_file_path)
+
+        print(new_intra_config)
+        with open(Path(self.args.output_dir, INTRA_CONFIG_FILE), 'w') as outfile:
+            yaml.dump(new_intra_config, outfile, default_flow_style=False)
 
 
 def remove_v4_nets(nets: Mapping[IPNetwork, NetworkDescription]
