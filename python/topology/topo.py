@@ -151,7 +151,15 @@ class TopoGenerator(object):
         # use BR_names to get the original string/name of the borderrouter
         for external_name, br_name in self.BR_names[str(topo_id)].items():
             if br == br_name:
-                ext_br_a = external_name
+                ext_name_no_itf = external_name.split('#')[0]
+                nr_splits = ext_name_no_itf.split('-')
+                if len(nr_splits) == 3:
+                    # specific ID is given
+                    # don't save interface, because this BR will have multiple interfaces
+                    ext_br_a = ext_name_no_itf
+                else:
+                    # no specific ID is given, save interface
+                    ext_br_a = external_name
                 break
         # now we have original strings of the BR
         # extract interanl name via the intra-config
