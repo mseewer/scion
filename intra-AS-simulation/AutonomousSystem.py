@@ -264,7 +264,7 @@ class AutonomousSystem(object):
         with open(config_file, mode='w') as f:
             config.write(f)
 
-    def add_SCION_services(self, BR_name_map):
+    def add_SCION_services(self):
         """Add + start SCION services to the correct node."""
         SUPERVISORD_FILE = Path(self.gen_dir, SUPERVISOR_CONF)
         supervisor_config = configparser.ConfigParser()
@@ -313,11 +313,12 @@ class AutonomousSystem(object):
 
             elif name in nodes['Borderrouter']:
                 # print('### Starting border router ###\n')
-                BR_name = BR_name_map[name]
-                program_name = f'program:{BR_name}'
+                nr_services['Borderrouter'] += 1
+                nr = nr_services['Borderrouter']
+                program_name = f'program:br{self.FULL_NAME}-{nr}-@{name}'
                 command = supervisor_config[program_name]['command']
                 logfile = supervisor_config[program_name]['stdout_logfile']
-                service = f'*{BR_name}*'
+                service = f'*br{self.FULL_NAME}-{nr}-@{name}*'
 
             else:
                 # this is a normal client, starting dispatcher is enough

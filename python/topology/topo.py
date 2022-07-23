@@ -31,7 +31,6 @@ import yaml
 from python.lib.defines import (
     AS_LIST_FILE,
     IFIDS_FILE,
-    BR_NAMES_FILE,
     SCION_MIN_MTU,
     SCION_ROUTER_PORT,
     TOPO_FILE,
@@ -101,8 +100,8 @@ class TopoGenerator(object):
         self.as_list = defaultdict(list)
         self.links = defaultdict(list)
         self.ifid_map = {}
-        self.BR_orig_str_map = {}
-        self.BR_names = {}
+        self.BR_internal_addr = defaultdict(dict)
+        self.BR_names = defaultdict(dict)
 
     def _reg_addr(self, topo_id: TopoID, elem_id, addr_type):
         subnet = self.args.subnet_gen[addr_type].register(str(topo_id))
@@ -146,8 +145,22 @@ class TopoGenerator(object):
         self._iterate(self._write_as_topo)
         self._write_as_list()
         self._write_ifids()
-        self._write_BR_name_mapping()
         return self.topo_dicts, networks
+
+    def get_internal_BR_name(self, topo_id, br):
+        # use BR_names to get the original string/name of the borderrouter
+        for external_name, br_name in self.BR_names[str(topo_id)].items():
+            if br == br_name:
+                ext_br_a = external_name
+                break
+        # now we have original strings of the BR
+        # extract interanl name via the intra-config
+        borderrouter_dict = self.args.intra_config_dict['ASes'][str(topo_id)]['Borderrouter']
+        for internal_name, br_name in borderrouter_dict.items():
+            if ext_br_a == br_name:
+                return internal_name
+
+        raise ValueError(f"Could not find internal borderrouter name for {br}")
 
     def get_nick_intra(self, node, intra_nodes_dict):
         if node in intra_nodes_dict['Colibri']:
@@ -163,7 +176,7 @@ class TopoGenerator(object):
         return 'r'
 
     def _register_intra_addrs(self, topo_id, as_conf):
-        intra_topo_file = self.args.intra_topo_dicts[topo_id.__str__()]
+        intra_topo_file = self.args.intra_topo_dicts[str(topo_id)]
         intra_nodes_dict = intra_topo_file['Nodes']
         intra_links = intra_topo_file['links']
         addr_type = addr_type_from_underlay(as_conf.get('underlay', DEFAULT_UNDERLAY))
@@ -187,8 +200,13 @@ class TopoGenerator(object):
 
         # register the border routers
         for (linkto, remote, attrs, l_br, r_br, l_ifid, r_ifid) in self.links[topo_id]:
+            internal_br_a = self.get_internal_BR_name(topo_id, l_br)
+            internal_br_b = self.get_internal_BR_name(remote, r_br)
             link_addr_type = addr_type_from_underlay(attrs.get('underlay', DEFAULT_UNDERLAY))
-            self._reg_link_addrs(l_br, r_br, l_ifid, r_ifid, link_addr_type)
+            a_id = "%s-@%s" % (l_br, internal_br_a)
+            b_id = "%s-@%s" % (r_br, internal_br_b)
+
+            self._reg_link_addrs(a_id, b_id, l_ifid, r_ifid, link_addr_type)
 
     def _register_addrs(self, topo_id, as_conf):
         self._register_srv_entries(topo_id, as_conf)
@@ -259,16 +277,6 @@ class TopoGenerator(object):
             if_ids[ep].add(ifid)
         return br, ifid
 
-    def _get_orig_str(self, x):
-        x_no_itf = x.split('#')[0]
-        x_split = x_no_itf.split('-')
-        if len(x_split) == 3:
-            # specific ID is given
-            # don't save interface, because this BR will have multiple interfaces
-            return x_no_itf
-        # no specific ID is given, all interfaces important
-        return x
-
     def _read_links(self):
         assigned_br_id = {}
         br_ids = defaultdict(int)
@@ -278,8 +286,6 @@ class TopoGenerator(object):
         for attrs in self.args.topo_config_dict["links"]:
             initial_a = attrs['a']
             initial_b = attrs['b']
-            orig_a = self._get_orig_str(initial_a)
-            orig_b = self._get_orig_str(initial_b)
             a = LinkEP(attrs.pop("a"))
             b = LinkEP(attrs.pop("b"))
             linkto = linkto_a = linkto_b = attrs.pop("linkAtoB")
@@ -296,12 +302,8 @@ class TopoGenerator(object):
             self.ifid_map[str(a)][a_desc] = b_desc
             self.ifid_map.setdefault(str(b), {})
             self.ifid_map[str(b)][b_desc] = a_desc
-            self.BR_names.setdefault(str(a), {})
             self.BR_names[str(a)][initial_a] = a_br
-            self.BR_names.setdefault(str(b), {})
             self.BR_names[str(b)][initial_b] = b_br
-            self.BR_orig_str_map[(a_br, a_ifid)] = orig_a
-            self.BR_orig_str_map[(b_br, b_ifid)] = orig_b
 
     def _generate_as_topo(self, topo_id, as_conf):
         mtu = as_conf.get('mtu', self.args.default_mtu)
@@ -346,9 +348,9 @@ class TopoGenerator(object):
         a_id = "%s%s-%s-@%s" % (nick_a, topo_id.file_fmt(), seen[a], a)
         b_id = "%s%s-%s-@%s" % (nick_b, topo_id.file_fmt(), seen[b], b)
 
-        ip = self._reg_link_addrs(a_id, b_id, seen[a], seen[b], addr_type)[0].ip
+        addr_a, addr_b = self._reg_link_addrs(a_id, b_id, seen[a], seen[b], addr_type)
 
-        for node, ID in [(a, a_id), (b, b_id)]:
+        for node, ID, ip in [(a, a_id, addr_a.ip), (b, b_id, addr_b.ip)]:
             if node in intra_nodes_dict['Colibri']:
                 port = self._default_ctrl_port('co')
                 self._gen_intra_srvs(port, ID, topo_id, "colibri_service", ip)
@@ -358,38 +360,27 @@ class TopoGenerator(object):
                 self._gen_intra_srvs(port, ID, topo_id, "control_service", ip)
                 self._gen_intra_srvs(port, ID, topo_id, "discovery_service", ip)
 
-        if link['a'] in intra_nodes_dict['Borderrouter']:
-            borderrouters[link['a']] = {'a_id': a_id,
-                                        'b_id': b_id, 'seen_a': seen[a], 'seen_b': seen[b]}
-        if link['b'] in intra_nodes_dict['Borderrouter']:
-            borderrouters[link['b']] = {'a_id': b_id,
-                                        'b_id': a_id, 'seen_a': seen[b], 'seen_b': seen[a]}
+            if node in intra_nodes_dict['Borderrouter']:
+                self.BR_internal_addr[topo_id][node] = ip
 
-    def _gen_intra_br_entry(self, remote_type, remote, attrs, l_br, r_br, l_ifid, r_ifid,
-                            borderrouter_dict, borderrouters, addr_type, topo_id):
+    def _gen_intra_br_entry(self, remote_type, remote, attrs, l_br, r_br, l_ifid, r_ifid, topo_id):
+        internal_br_a = self.get_internal_BR_name(topo_id, l_br)
+        internal_addr_a = self.BR_internal_addr[topo_id][internal_br_a]
+        internal_br_b = self.get_internal_BR_name(remote, r_br)
+        # encode internal name into id
+        a_id = "%s-@%s" % (l_br, internal_br_a)
+        b_id = "%s-@%s" % (r_br, internal_br_b)
         link_addr_type = addr_type_from_underlay(attrs.get('underlay', DEFAULT_UNDERLAY))
-        public_addr, remote_addr = self._reg_link_addrs(l_br, r_br, l_ifid,
-                                                        r_ifid, link_addr_type)
+        public_addr, remote_addr = self._reg_link_addrs(
+            a_id, b_id, l_ifid, r_ifid, link_addr_type)
 
-        local_br = self.BR_orig_str_map[(l_br, l_ifid)]
-        for internal_name, br_name in borderrouter_dict.items():
-            if local_br == br_name:
-                internal_br = internal_name
-                break
-
-        a_id = borderrouters[internal_br]['a_id']
-        b_id = borderrouters[internal_br]['b_id']
-        seen_a = borderrouters[internal_br]['seen_a']
-        seen_b = borderrouters[internal_br]['seen_b']
-
-        intl_addr = self._reg_link_addrs(a_id, b_id, seen_a, seen_b, addr_type)[0]
-        if self.topo_dicts[topo_id]["border_routers"].get(l_br) is None:
+        if self.topo_dicts[topo_id]["border_routers"].get(a_id) is None:
             intl_port = 30042
             if not self.args.docker:
                 intl_port = self.args.port_gen.register(a_id)
 
-            self.topo_dicts[topo_id]["border_routers"][l_br] = {
-                'internal_addr': join_host_port(intl_addr.ip, intl_port),
+            self.topo_dicts[topo_id]["border_routers"][a_id] = {
+                'internal_addr': join_host_port(internal_addr_a, intl_port),
                 'interfaces': {
                     l_ifid: self._gen_br_intf(remote, public_addr, remote_addr, attrs, remote_type)
                 }
@@ -397,24 +388,22 @@ class TopoGenerator(object):
         else:
             # There is already a BR entry, add interface
             intf = self._gen_br_intf(remote, public_addr, remote_addr, attrs, remote_type)
-            self.topo_dicts[topo_id]["border_routers"][l_br]['interfaces'][l_ifid] = intf
+            self.topo_dicts[topo_id]["border_routers"][a_id]['interfaces'][l_ifid] = intf
 
     def _gen_intra_entries(self, topo_id, as_conf):
-        intra_topo_file = self.args.intra_topo_dicts[topo_id.__str__()]
-        borderrouter_dict = self.args.intra_config_dict['ASes'][topo_id.__str__()]['Borderrouter']
+        intra_topo_file = self.args.intra_topo_dicts[str(topo_id)]
         intra_nodes_dict = intra_topo_file['Nodes']
-        intra_links = intra_topo_file['links']
         addr_type = addr_type_from_underlay(as_conf.get('underlay', DEFAULT_UNDERLAY))
 
         seen = defaultdict(int)
         borderrouters = {}
 
-        for link in intra_links:
+        for link in intra_topo_file['links']:
             self._gen_intra_entry(link, intra_nodes_dict, seen, borderrouters, addr_type, topo_id)
 
         for (remote_type, remote, attrs, l_br, r_br, l_ifid, r_ifid) in self.links[topo_id]:
-            self._gen_intra_br_entry(remote_type, remote, attrs, l_br, r_br, l_ifid, r_ifid,
-                                     borderrouter_dict, borderrouters, addr_type, topo_id)
+            self._gen_intra_br_entry(remote_type, remote, attrs,
+                                     l_br, r_br, l_ifid, r_ifid, topo_id)
 
     def _gen_srv_entries(self, topo_id, as_conf):
         srvs = [("control_servers", DEFAULT_CONTROL_SERVERS, "cs", "control_service")]
@@ -538,11 +527,6 @@ class TopoGenerator(object):
     def _write_ifids(self):
         list_path = os.path.join(self.args.output_dir, IFIDS_FILE)
         write_file(list_path, yaml.dump(self.ifid_map,
-                                        default_flow_style=False))
-
-    def _write_BR_name_mapping(self):
-        list_path = os.path.join(self.args.output_dir, BR_NAMES_FILE)
-        write_file(list_path, yaml.dump(self.BR_names,
                                         default_flow_style=False))
 
 

@@ -36,6 +36,7 @@ from python.lib.defines import (
     DEFAULT6_NETWORK,
     NETWORKS_FILE,
     INTRA_CONFIG_FILE,
+    INTRA_TOPOLOGY_FILE,
 )
 from python.lib.scion_addr import ISD_AS
 from python.lib.util import (
@@ -43,7 +44,7 @@ from python.lib.util import (
     write_file,
 )
 from python.topology.cert import CertGenArgs, CertGenerator
-from python.topology.common import ArgsBase
+from python.topology.common import ArgsBase, TopoID
 from python.topology.docker import DockerGenArgs, DockerGenerator
 from python.topology.go import GoGenArgs, GoGenerator
 from python.topology.jaeger import JaegerGenArgs, JaegerGenerator
@@ -452,18 +453,17 @@ class ConfigGenerator(object):
                 intra_config_folder = Path(self.intra_config_file).parent
                 intra_topo_file = Path(intra_config_folder, intra_topo_file)
 
-            new_intra_file_path = Path("intra-topologies/",
-                                       ISD_AS(asStr).file_fmt() + ".intra.topo")
+            AS_dir = TopoID(asStr).AS_file()
+            new_intra_file_path = Path(AS_dir, INTRA_TOPOLOGY_FILE)
 
-            output_file = Path(self.args.output_dir, new_intra_file_path)
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(intra_topo_file, output_file)
+            Path(AS_dir).mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(intra_topo_file,
+                            Path(self.args.output_dir, new_intra_file_path))
 
             new_intra_config["ASes"][asStr]["Intra-Topology"] = str(new_intra_file_path)
 
-        print(new_intra_config)
-        with open(Path(self.args.output_dir, INTRA_CONFIG_FILE), 'w') as outfile:
-            yaml.dump(new_intra_config, outfile, default_flow_style=False)
+        outfile = Path(self.args.output_dir, INTRA_CONFIG_FILE)
+        write_file(str(outfile), yaml.dump(new_intra_config, default_flow_style=False))
 
 
 def remove_v4_nets(nets: Mapping[IPNetwork, NetworkDescription]
