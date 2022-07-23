@@ -145,16 +145,16 @@ password scion
                 cost += int(1000/bw)
         if delay is not None:
             # increase cost for high delay
-            raw_delay = int(delay)
-            real_delay = raw_delay * 1000
-            cost += int(real_delay)
+            raw_delay = delay.split('ms')[0]
+            real_delay = int(raw_delay) * 1000
+            cost += real_delay
         if loss is not None:
             # increase cost for high loss
             cost += int(10*float(loss))
         if jitter is not None:
-            raw_jitter = int(jitter)
+            raw_jitter = jitter.split('ms')[0]
             # jitter in ms
-            real_jitter = raw_jitter * 1000
-            cost += int(real_jitter)
+            real_jitter = int(raw_jitter) * 1000
+            cost += real_jitter
 
         return min(cost, max_cost)

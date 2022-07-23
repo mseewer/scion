@@ -270,6 +270,28 @@ class ConfigGenerator(object):
                 "ERROR: AS %s: Not all Borderrouter names defined in intra topology!", asStr)
             sys.exit(1)
 
+    def check_link_properties(self, link, asStr):
+        bw = link.get('bw', None)
+        delay = link.get('delay', None)
+        jitter = link.get('jitter', None)
+        loss = link.get('loss', None)
+        for metric, value in [('bw',bw), ('delay',delay), ('jitter',jitter)]:
+            if value is None:
+                continue
+            try:
+                int(value)
+            except ValueError:
+                logging.critical(
+                    "ERROR: AS %s: %s value '%s' is not an integer", asStr, metric, value)
+                sys.exit(1)
+        if loss is not None:
+            try:
+                float(loss)
+            except ValueError:
+                logging.critical(
+                    "ERROR: AS %s: Loss value '%s' is not a float", asStr, loss)
+                sys.exit(1)
+
     def check_links(self, intra_topo_dict, asStr):
         nodes = intra_topo_dict["Nodes"]
         node_names = []
@@ -290,6 +312,9 @@ class ConfigGenerator(object):
                     "ERROR: AS %s: Node '%s' not found in intra topology, but used in links",
                     asStr, b)
                 sys.exit(1)
+
+            # checking if properties are correctly defined
+            self.check_link_properties(link, asStr)
 
     def check_NR_connections(self, intra_topo_dict, asStr):
         nodes = intra_topo_dict["Nodes"]
