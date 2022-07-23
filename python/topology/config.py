@@ -275,7 +275,7 @@ class ConfigGenerator(object):
         delay = link.get('delay', None)
         jitter = link.get('jitter', None)
         loss = link.get('loss', None)
-        for metric, value in [('bw',bw), ('delay',delay), ('jitter',jitter)]:
+        for metric, value in [('bw', bw), ('delay', delay), ('jitter', jitter)]:
             if value is None:
                 continue
             try:
