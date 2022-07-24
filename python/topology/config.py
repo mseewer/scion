@@ -201,6 +201,11 @@ class ConfigGenerator(object):
                         # don't save interface, because this BR will have multiple interfaces
                         SCION_BRs.add(x_no_itf)
                     else:
+                        if x in SCION_BRs:
+                            logging.critical(
+                                f"AS {asStr}: Borderrouter '{x}' is defined multiple times. " +
+                                "Add unique interface to its name.")
+                            sys.exit(1)
                         # no specific ID is given, save all interfaces
                         SCION_BRs.add(x)
 
