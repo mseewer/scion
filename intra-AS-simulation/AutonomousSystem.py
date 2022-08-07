@@ -346,6 +346,6 @@ class AutonomousSystem(object):
     def stop(self):
         """Stop all processes."""
         for pid in self.started_pids:
-            os.system(f'kill -9 {pid}')
+            os.system(f'kill -9 {pid} > /dev/null 2>&1')
         self.protocol.stop()
         self.net.stop()
