@@ -72,6 +72,8 @@ class TopoGenArgs(ArgsBase):
         """
         :param ArgsBase args: Contains the passed command line arguments.
         :param dict topo_config: The parsed topology config.
+        :param dict intra_config: The parsed intra-AS config file.
+        :param dict intra_topo_dicts: The parsed intra-AS topology file.
         :param SubnetGenerator subnet_gen4: The default network generator for IPv4.
         :param SubnetGenerator subnet_gen6: The default network generator for IPv6.
         :param dict default_mtu: The default mtu.
