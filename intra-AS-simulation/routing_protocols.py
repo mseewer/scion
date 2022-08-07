@@ -19,16 +19,13 @@ class Zebra(object):
 
         zebra_config_file = Path(self.config_path, f'zebra_{name}.conf')
 
-        config = f"""hostname {name}
-password scion
-    """
+        config = f"hostname {name}"
+        config += "\npassword scion"
 
         for intf in node.intfList():
-            config += f"""
-interface {intf.name}
-    ip address {intf.IP()}/{intf.prefixLen}
-    no shutdown
-        """
+            config += f"\n\ninterface {intf.name}"
+            config += f"\n\tip address {intf.IP()}/{intf.prefixLen}"
+            config += "\n\tno shutdown"
 
         with open(zebra_config_file, mode='w') as f:
             f.writelines(config)
@@ -80,15 +77,15 @@ class OSPF(object):
                 # give time for the process to stop
                 node.monitor(timeoutms=2000)
                 node.waiting = False
-            node.cmd(f'kill -9 $(cat {pid_zebra})')
-            node.cmd(f'kill -9 $(cat {pid_ospf})')
-            node.cmd(f'rm {pid_zebra}')
-            node.cmd(f'rm {pid_ospf}')
-            node.cmd(f'rm {socket}')
-        node.cmd(f'rm -rf {self.Zebra.config_path}')
-        node.cmd(f'rm -rf {self.config_path}')
-        node.cmd(f'rm -rf {self.temp_path}')
-        node.cmd('rm -rf /var/tmp/frr/')
+            node.cmd(f'kill -9 $(cat {pid_zebra}) > /dev/null 2>&1')
+            node.cmd(f'kill -9 $(cat {pid_ospf}) > /dev/null 2>&1')
+            node.cmd(f'rm {pid_zebra} > /dev/null 2>&1')
+            node.cmd(f'rm {pid_ospf} > /dev/null 2>&1')
+            node.cmd(f'rm {socket} > /dev/null 2>&1')
+        node.cmd(f'rm -rf {self.Zebra.config_path} > /dev/null 2>&1')
+        node.cmd(f'rm -rf {self.config_path} > /dev/null 2>&1')
+        node.cmd(f'rm -rf {self.temp_path} > /dev/null 2>&1')
+        node.cmd('rm -rf /var/tmp/frr/ > /dev/null 2>&1')
 
     def create_config(self, node):
         """Create OSPF config file for this node.
@@ -99,29 +96,23 @@ class OSPF(object):
         name = node.name
         config_file = Path(self.config_path, f'ospf_{name}.conf')
 
-        config = f"""!
-hostname {name}
-password scion
-!
-"""
+        config = f"hostname {name}"
+        config += "\npassword scion"
+
         for intf in node.intfList():
             cost = OSPF.calc_cost(intf.params)
 
-            config += f"""interface {intf.name}
-    ip ospf area 0
-    ip ospf cost {cost}
-!
-"""
+            config += f"\n\ninterface {intf.name}"
+            config += "\n\tip ospf area 0"
+            config += f"\n\tip ospf cost {cost}"
 
-        config += f"""router ospf
-    ospf router-id {node.defaultIntf().IP()}
-    redistribute connected
-    passive-interface default
-    """
+        config += "\n\nrouter ospf"
+        config += f"\n\tospf router-id {node.defaultIntf().IP()}"
+        config += "\n\tredistribute connected"
+        config += "\n\tpassive-interface default"
 
         for intf in node.intfList():
-            config += f"""no passive-interface {intf.name}
-    """
+            config += f"\n\tno passive-interface {intf.name}"
 
         with open(config_file, mode='w') as f:
             f.writelines(config)
@@ -146,7 +137,7 @@ password scion
         if delay is not None:
             # increase cost for high delay
             raw_delay = delay.split('ms')[0]
-            real_delay = int(raw_delay) * 1000
+            real_delay = int(raw_delay)
             cost += real_delay
         if loss is not None:
             # increase cost for high loss
@@ -154,7 +145,7 @@ password scion
         if jitter is not None:
             raw_jitter = jitter.split('ms')[0]
             # jitter in ms
-            real_jitter = int(raw_jitter) * 1000
+            real_jitter = int(raw_jitter)
             cost += real_jitter
 
         return min(cost, max_cost)
