@@ -114,17 +114,17 @@ class SCIONTopology(object):
             b = link['b']
             label = ""
             if link.get('bw', None) is not None:
-                label += f'BW: {link["bw"]} Mbit/s\n'
+                label += f'BW: {link["bw"]}Mbit/s\n'
             if link.get('delay', None) is not None:
-                label += f'Delay: {link["delay"]} ms\n'
+                label += f'Delay: {link["delay"]}ms\n'
             if link.get('loss', None) is not None:
                 label += f'Loss: {link["loss"]}%\n'
             if link.get('jitter', None) is not None:
-                label += f'Jitter: {link["jitter"]} ms\n'
+                label += f'Jitter: {link["jitter"]}ms\n'
+            if link.get('mtu', None) is not None:
+                label += f'MTU: {link["mtu"]}B\n'
             label = label.strip()
-            G.add_edge(a, b,
-                       label=label
-                       )
+            G.add_edge(a, b, label=label)
         if not nx.is_connected(G):
             error("ERROR: AS %s: Intra topology is not connected", ISD_AS_id)
             sys.exit(1)
