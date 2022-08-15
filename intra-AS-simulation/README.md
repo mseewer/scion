@@ -3,7 +3,7 @@
 ## Requirements
 
 - Install SCION according to official documentation
-    (<https://scion.docs.anapaya.net/en/latest/build/setup.html>)
+    (../doc/build/setup.rst)
 - Clone SCION-Apps repository (<https://github.com/netsec-ethz/scion-apps>)
     and install/build it according to their README.md
 

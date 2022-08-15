@@ -16,5 +16,6 @@ sudo apt install frr frr-pythontools
 
 # install intra-AS dependencies
 sudo apt install -y python3-pip
-sudo pip3 install -r requirements.txt
+python3 -m pip install pip --upgrade
+python3 -m pip install -r requirements.txt
 
