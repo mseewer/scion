@@ -20,9 +20,10 @@ echo deb https://deb.frrouting.org/frr $(lsb_release -s -c) $FRRVER | sudo tee -
 # update and install FRR
 sudo apt update
 sudo apt install frr frr-pythontools
+sudo usermod -aG frrvty root
 
 # install intra-AS dependencies
-sudo apt install -y python3-pip
+sudo apt install -y python3-pip mininet
 python3 -m pip install pip --upgrade
 python3 -m pip install -r "$BASE/requirements.txt"
 
