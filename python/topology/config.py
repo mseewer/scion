@@ -140,6 +140,7 @@ class ConfigGenerator(object):
 
     def _ensure_correct_format(self):
         # we know that AS are unique
+        self.check_IP_version()
         self.check_AS_internal_topology()
 
         for asStr, config in self.intra_config["ASes"].items():
@@ -169,6 +170,13 @@ class ConfigGenerator(object):
             self.check_NR_connections(intra_topo_dict, asStr)
             # check if network is connected
             self.check_network_connected(intra_topo_dict, asStr)
+
+    def check_IP_version(self):
+        for asStr, params in self.topo_config["ASes"].items():
+            underlay = params.get("underlay", "")
+            if "IPv6" in underlay:
+                logging.critical("ERROR: AS %s: IPv6 currently not supported", asStr)
+                sys.exit(1)
 
     def check_AS_internal_topology(self):
         ASes = set()
