@@ -7,13 +7,13 @@ cmd_build() {
 
     if [ -z "$1" ]
     then
-        echo "No path to intra-AS configuration supplied!"
+        echo "No path to AS configuration supplied!"
         cmd_help
         exit 1
     fi
     if [ ! -f "$1" ]
     then
-        echo "Path to intra-AS configuration does not exist!"
+        echo "Path to AS configuration does not exist!"
         cmd_help
         exit 1
     fi
@@ -49,6 +49,12 @@ cmd_run(){
     sudo -E PYTHONPATH=$PYTHONPATH intra-AS-simulation/start_SCION.py "$@"
 }
 
+cmd_create_config(){
+    set -e 
+    python3 intra-AS-simulation/AS_config_creator.py "$@" 
+}
+
+
 cmd_clean_intra(){
     ./intra-AS-simulation/clean_up.py
 }
@@ -64,10 +70,12 @@ cmd_help() {
 	echo
 	cat <<-_EOF
 	Usage:
-	    $PROGRAM build <intra-AS-config-file> <SCION-topo-config-file> [other SCION topology options]
+	    $PROGRAM build <AS-config-file> <SCION-topo-config-file> [other SCION topology options]
 	        Create topology, configuration, and execution files.
-	    $PROGRAM run <intra-AS-configuration-file>
+	    $PROGRAM run <AS-configuration-file>
 	        Run network.
+        $PROGRAM create_config -i <SCION-topo-config-file> [other options]
+	        Creates AS configuration file from SCION topology file
 	    $PROGRAM clean_intra
 	        Clean intra-AS simulation files.
 	    $PROGRAM clean_all
@@ -83,7 +91,7 @@ COMMAND="$1"
 shift
 
 case "$COMMAND" in
-    help|build|run|clean_intra|clean_all)
+    help|build|run|create_config|clean_intra|clean_all)
         "cmd_$COMMAND" "$@" ;;
     start) cmd_run "$@" ;;
     clean) cmd_clean_intra ;;
