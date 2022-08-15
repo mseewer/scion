@@ -46,7 +46,7 @@ cmd_build() {
 
 cmd_run(){
     set -e
-    sudo -E PYTHONPATH=$PYTHONPATH intra-AS-simulation/start_SCION.py "$@"
+    sudo -E PYTHONPATH=$PYTHONPATH intra-AS-simulation/start_simulation.py "$@"
 }
 
 cmd_create_config(){
