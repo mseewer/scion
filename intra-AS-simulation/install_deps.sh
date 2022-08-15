@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+if [ $(id -u) = "0" ]; then
+    echo "ERROR: Running $0 as root is not supported"
+    exit 1
+fi
+
+BASE=$(dirname "$0")
+
 # INSTALL commands taken from: https://deb.frrouting.org/
 
 # add GPG key
@@ -17,5 +24,5 @@ sudo apt install frr frr-pythontools
 # install intra-AS dependencies
 sudo apt install -y python3-pip
 python3 -m pip install pip --upgrade
-python3 -m pip install -r requirements.txt
+python3 -m pip install -r "$BASE/requirements.txt"
 
