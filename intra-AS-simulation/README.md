@@ -2,10 +2,9 @@
 
 ## Requirements
 
-- Install SCION according to official documentation
-    (../doc/build/setup.rst)
+- Install SCION according to the official documentation, see [here](../doc/build/setup.rst) for detailed instructions.
 - Clone SCION-Apps repository (<https://github.com/netsec-ethz/scion-apps>)
-    and install/build it according to their README.md
+    and build it according to their README.md
 
 ## Installation
 
@@ -20,16 +19,21 @@
 ## Usage
 
 - Whole usage can be done with the helper script `scion-intra.sh` in the root directory of this repo.
-- First build SCION Proto configuration files:
-
+- Automatically create AS configuration file from SCION topology file.
     ```bash
-    ./scion-intra.sh build path-to-intra-AS-config-file path-to-SCION-topo-config-file [other-SCION-topology-flags]
+    ./scion-intra.sh create_config -i <SCION-topo-config-file> [other options]
+    ./scion-intra.sh create_config -i topology/tiny4.topo
+    ```
+
+- Build SCION Proto with intra-AS simulation enabled:
+    ```bash
+    ./scion-intra.sh <AS-config-file> <SCION-topo-config-file> [other-SCION-topology-flags]
     ```
 
 - Then run the simulation:
 
     ```bash
-    export SCION_APPS_PATH=ath-to-SCION-apps-directory
+    export SCION_APPS_PATH=path-to-SCION-apps-directory
     ./scion-intra.sh run
     ```
 
