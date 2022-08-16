@@ -82,7 +82,7 @@ def generate_intra_dict(BRs_per_AS, protocol, intra_topo):
     with open(intra_topo, 'r') as f:
         topo_dict = yaml.safe_load(f)
         internal_BRs = topo_dict.get('Nodes', []).get('Borderrouter', [])
-    
+
     intra_dict = {'ASes': {}}
     for AS, BRs in BRs_per_AS.items():
         BR_map = {}

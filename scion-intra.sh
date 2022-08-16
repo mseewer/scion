@@ -50,8 +50,8 @@ cmd_run(){
 }
 
 cmd_create_config(){
-    set -e 
-    python3 intra-AS-simulation/AS_config_creator.py "$@" 
+    set -e
+    python3 intra-AS-simulation/AS_config_creator.py "$@"
 }
 
 
