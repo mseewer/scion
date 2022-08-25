@@ -74,7 +74,7 @@ cmd_help() {
 	        Create topology, configuration, and execution files.
 	    $PROGRAM run <AS-configuration-file>
 	        Run network.
-        $PROGRAM create_config -i <SCION-topo-config-file> [other options]
+	    $PROGRAM create_config -i <SCION-topo-config-file> [other options]
 	        Creates AS configuration file from SCION topology file
 	    $PROGRAM clean_intra
 	        Clean intra-AS simulation files.
